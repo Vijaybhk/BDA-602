@@ -1,1 +1,6 @@
 numpy
+Matplotlib
+pandas
+scikit-learn
+argparse
+plotly
