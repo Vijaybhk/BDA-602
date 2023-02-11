@@ -73,6 +73,66 @@ def model_fit_test(classifier_dict, train_var, train_target, test_var, test_targ
     return
 
 
+def diff_mean_response_plot(df, class_col, predictor):
+    class_mean = df[df[class_col] == 1][predictor].mean()
+    class_not_mean = df[df[class_col] == 0][predictor].mean()
+
+    total_mean = df[predictor].mean()
+
+    fig = go.Figure(layout=dict(bargap=0.3))
+
+    fig.add_trace(
+        go.Histogram(
+            x=df[class_col],
+            y=df[predictor],
+            name="Count",
+            yaxis="y",
+            opacity=0.5,
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=[0, 1],
+            y=[class_not_mean, class_mean],
+            name="Bin Mean",
+            yaxis="y2",
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(x=[0, 1], y=[total_mean, total_mean], name="Total Mean", yaxis="y2")
+    )
+
+    # axes objects
+    fig.update_layout(
+        xaxis=dict(domain=[0.3, 0.7], title="{}".format(class_col)),
+        # 1st y axis
+        yaxis=dict(
+            title="Count",
+            titlefont=dict(color="#1f77b4"),
+            tickfont=dict(color="#1f77b4"),
+        ),
+        # 2nd y axis
+        yaxis2=dict(title="{}".format(predictor), overlaying="y", side="right"),
+    )
+
+    # title
+    fig.update_layout(
+        title_text="Difference with Mean of Response Plot on Data for {} and {}".format(
+            class_col, predictor
+        ),
+        width=800,
+    )
+
+    fig.write_html(
+        file="./Plots/Diff Plot {} and {}.html".format(class_col, predictor),
+        include_plotlyjs="cdn",
+    )
+
+    return
+
+
 def main():
     # Using URL for data instead of downloading for better reproducibility
     data_path = (
@@ -247,58 +307,14 @@ def main():
 
     # Create Boolean responses for classes
     df = pd.get_dummies(df)
-    print(df.columns)
+    column_names = df.columns
+    print(column_names)
 
-    class_iris_setosa_mean = df[df["class_Iris-setosa"] == 1]["sepal length"].mean()
-    class_not_iris_setosa_mean = df[df["class_Iris-setosa"] == 0]["sepal length"].mean()
-
-    total_mean = df["sepal length"].mean()
-
-    fig = go.Figure(layout=dict(bargap=0.3))
-
-    fig.add_trace(
-        go.Histogram(
-            x=df["class_Iris-setosa"],
-            y=df["sepal length"],
-            name="Count",
-            yaxis="y",
-            opacity=0.5,
-        )
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=[0, 1],
-            y=[class_not_iris_setosa_mean, class_iris_setosa_mean],
-            name="Bin Mean",
-            yaxis="y2",
-        )
-    )
-
-    fig.add_trace(
-        go.Scatter(x=[0, 1], y=[total_mean, total_mean], name="Total Mean", yaxis="y2")
-    )
-
-    # axes objects
-    fig.update_layout(
-        xaxis=dict(domain=[0.3, 0.7], title="Class Iris Setosa"),
-        # 1st y axis
-        yaxis=dict(
-            title="Count",
-            titlefont=dict(color="#1f77b4"),
-            tickfont=dict(color="#1f77b4"),
-        ),
-        # 2nd y axis
-        yaxis2=dict(title="Sepal Length", overlaying="y", side="right"),
-    )
-
-    # title
-    fig.update_layout(
-        title_text="Difference with Mean of Response Plot on Data",
-        width=800,
-    )
-
-    fig.write_html(file="./Plots/Diff Plot Iris Setosa.html", include_plotlyjs="cdn")
+    for i in range(0, 4):
+        for j in range(4, 7):
+            diff_mean_response_plot(
+                df, class_col=column_names[j], predictor=column_names[i]
+            )
 
     return
 
