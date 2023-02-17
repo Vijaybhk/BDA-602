@@ -1,3 +1,4 @@
+import os
 import sys
 
 import numpy as np
@@ -73,60 +74,82 @@ def model_fit_test(classifier_dict, train_var, train_target, test_var, test_targ
     return
 
 
-def diff_mean_response_plot(df, class_col, predictor):
-    class_mean = df[df[class_col] == 1][predictor].mean()
-    class_not_mean = df[df[class_col] == 0][predictor].mean()
+def create_dir(dir_name):
+    """
+    Creates a new directory inside the directory where the current run file is located
+    :param dir_name: Input the directory name as string
+    :return: absolute path of the directory created
+    """
+    this_dir = os.path.dirname(os.path.realpath(__file__))
+    out_dir = "{}/{}".format(this_dir, dir_name)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    return out_dir
 
-    total_mean = df[predictor].mean()
 
-    fig = go.Figure(layout=dict(bargap=0.3))
+def diff_mean_response_plot(df, predictor, response, write_dir):
+    """
+    Creates difference in mean of response plots and saves as html files in the write directory
+    :param df: Input dataframe
+    :param predictor: predictor in the dataframe which is a class variable
+    :param response: predictor in dataframe which is a response variable
+    :param write_dir: Input the write directory path where the plots are to be saved
+    """
+    total_mean = df[response].mean()
+
+    fig = go.Figure()
 
     fig.add_trace(
         go.Histogram(
-            x=df[class_col],
-            y=df[predictor],
-            name="Count",
-            yaxis="y",
+            x=df[predictor],
+            y=df[response],
+            name="Population",
+            yaxis="y2",
             opacity=0.5,
         )
     )
 
     fig.add_trace(
         go.Scatter(
-            x=[0, 1],
-            y=[class_not_mean, class_mean],
+            x=df[predictor].unique(),
+            y=[df[df[predictor] == i][response].mean() for i in df[predictor].unique()],
             name="Bin Mean",
-            yaxis="y2",
+            yaxis="y",
         )
     )
 
     fig.add_trace(
-        go.Scatter(x=[0, 1], y=[total_mean, total_mean], name="Total Mean", yaxis="y2")
+        go.Scatter(
+            x=df[predictor].unique(),
+            y=[total_mean, total_mean],
+            name="Population Mean",
+            yaxis="y",
+        )
     )
 
     # axes objects
     fig.update_layout(
-        xaxis=dict(domain=[0.3, 0.7], title="{}".format(class_col)),
+        xaxis=dict(title="Predictor Bin"),
         # 1st y axis
         yaxis=dict(
-            title="Count",
+            title="Response",
             titlefont=dict(color="#1f77b4"),
             tickfont=dict(color="#1f77b4"),
         ),
         # 2nd y axis
-        yaxis2=dict(title="{}".format(predictor), overlaying="y", side="right"),
+        yaxis2=dict(title="Population", overlaying="y", side="right"),
+        legend=dict(x=1.1, y=1),
     )
 
     # title
     fig.update_layout(
-        title_text="Difference with Mean of Response Plot on Data for {} and {}".format(
-            class_col, predictor
+        title_text="Difference with Mean of Response Plot for {} and {}".format(
+            predictor, response
         ),
-        width=800,
     )
 
     fig.write_html(
-        file="./Plots/Diff Plot {} and {}.html".format(class_col, predictor),
+        file="{}/Diff Plot {} and {}.html".format(write_dir, predictor, response),
         include_plotlyjs="cdn",
     )
 
@@ -138,6 +161,9 @@ def main():
     data_path = (
         "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
     )
+
+    # Create Plots dir
+    plot_dir = create_dir(dir_name="Plots")
 
     # Data from source does not have column names included
     col_names = ["sepal length", "sepal width", "petal length", "petal width", "class"]
@@ -181,7 +207,7 @@ def main():
             title="Box Plot of {}".format(col_names[i]),
         )
         plot.write_html(
-            file="./Plots/Box plot of {}.html".format(col_names[i]),
+            file="{}/Box plot of {}.html".format(plot_dir, col_names[i]),
             include_plotlyjs="cdn",
         )
 
@@ -195,7 +221,7 @@ def main():
             title="Violin Plot of {}".format(col_names[i]),
         )
         plot.write_html(
-            file="./Plots/Violin plot of {}.html".format(col_names[i]),
+            file="{}/Violin plot of {}.html".format(plot_dir, col_names[i]),
             include_plotlyjs="cdn",
         )
 
@@ -215,7 +241,8 @@ def main():
     )
 
     fig_grouped_box.write_html(
-        file="./Plots/Grouped Box Plot of Iris Species.html", include_plotlyjs="cdn"
+        file="{}/Grouped Box Plot of Iris Species.html".format(plot_dir),
+        include_plotlyjs="cdn",
     )
 
     # Grouped Violin Plot
@@ -228,7 +255,8 @@ def main():
     )
 
     fig_grouped_violin.write_html(
-        file="./Plots/Grouped Violin Plot of Iris Species.html", include_plotlyjs="cdn"
+        file="{}/Grouped Violin Plot of Iris Species.html".format(plot_dir),
+        include_plotlyjs="cdn",
     )
 
     # Scatter Matrix Plot
@@ -241,7 +269,8 @@ def main():
     )
 
     scatter_matrix.write_html(
-        file="./Plots/Scatter Matrix of Iris Species.html", include_plotlyjs="cdn"
+        file="{}/Scatter Matrix of Iris Species.html".format(plot_dir),
+        include_plotlyjs="cdn",
     )
 
     # Grouped Bar Plot
@@ -255,7 +284,8 @@ def main():
     )
 
     fig_grouped_bar.write_html(
-        file="./Plots/Grouped Bar Plot of Iris Species.html", include_plotlyjs="cdn"
+        file="{}/Grouped Bar Plot of Iris Species.html".format(plot_dir),
+        include_plotlyjs="cdn",
     )
 
     # Label Encoder and encode class labels in Iris dataset
@@ -306,14 +336,26 @@ def main():
     )
 
     # Create Boolean responses for classes
-    df = pd.get_dummies(df)
+    df["class_Iris-versicolor"] = np.where(
+        df["class"] == "Iris-versicolor", "Is", "Is Not"
+    )
+    df["class_Iris-setosa"] = np.where(df["class"] == "Iris-setosa", "Is", "Is Not")
+    df["class_Iris-virginica"] = np.where(
+        df["class"] == "Iris-virginica", "Is", "Is Not"
+    )
+
+    print(df.head(3))
+
     column_names = df.columns
     print(column_names)
 
     for i in range(0, 4):
-        for j in range(4, 7):
+        for j in range(5, 8):
             diff_mean_response_plot(
-                df, class_col=column_names[j], predictor=column_names[i]
+                df,
+                predictor=column_names[j],
+                response=column_names[i],
+                write_dir=plot_dir,
             )
 
     return
