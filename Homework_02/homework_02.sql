@@ -12,6 +12,7 @@ USE baseball;
 -- Historic batting average for each player
 DROP TABLE IF EXISTS batter_historic_stats;
 
+-- Creating batter historic stats table
 CREATE TABLE IF NOT EXISTS batter_historic_stats AS
 SELECT
     batter
@@ -25,11 +26,19 @@ ORDER BY batter
 
 ALTER TABLE batter_historic_stats ADD PRIMARY KEY (batter);
 
-SELECT batter, historic_hits, historic_atBats, historic_average FROM batter_historic_stats ORDER BY batter LIMIT 0, 20;
+-- Querying batter historic stats table
+SELECT
+    batter
+    , historic_hits
+    , historic_atBats
+    , historic_average
+FROM batter_historic_stats
+;
 
 -- Annual batting average for each player
 DROP TABLE IF EXISTS batter_annual_stats;
 
+-- Creating batter annual stats table
 CREATE TABLE IF NOT EXISTS batter_annual_stats AS
 SELECT
     b.batter
@@ -44,9 +53,18 @@ ORDER BY batter, game_year
 
 ALTER TABLE batter_annual_stats ADD PRIMARY KEY (batter, game_year);
 
-SELECT batter, game_year, annual_hits, annual_atBats, annual_average FROM batter_annual_stats LIMIT 0, 20;
+-- Querying batter annual stats table
+SELECT
+    batter
+    , game_year
+    , annual_hits
+    , annual_atBats
+    , annual_average
+FROM batter_annual_stats
+;
 
 -- Rolling batting average for each player
+-- Creating batter rolling stats table
 DROP TABLE IF EXISTS batter_rolling_stats;
 
 CREATE TABLE IF NOT EXISTS batter_rolling_stats AS
@@ -76,4 +94,12 @@ ORDER BY A.batter, A.game_date
 
 ALTER TABLE batter_rolling_stats ADD PRIMARY KEY (batter, game_date);
 
-SELECT batter, game_date, rolling_hits, rolling_atBats, rolling_average FROM batter_rolling_stats LIMIT 0, 20;
+-- Querying batter rolling stats table
+SELECT
+    batter
+    , game_date
+    , rolling_hits
+    , rolling_atBats
+    , rolling_average
+FROM batter_rolling_stats
+;
