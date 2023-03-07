@@ -9,16 +9,19 @@ USE baseball;
 
 
 -- Creating Tables to store the calculated averages
+
 -- Historic batting average for each player
 DROP TABLE IF EXISTS batter_historic_stats;
 
 -- Creating batter historic stats table
-CREATE TABLE IF NOT EXISTS batter_historic_stats AS
+CREATE TABLE batter_historic_stats AS
 SELECT
     batter
     , SUM(Hit) AS historic_hits
     , SUM(atBat) AS historic_atBats
-    , IF( SUM(atBat) = 0, NULL, SUM(Hit) / SUM(atBat)) AS historic_average
+    , IF( SUM(atBat) = 0
+        , NULL
+        , SUM(Hit) / SUM(atBat)) AS historic_average
 FROM batter_counts
 GROUP BY batter
 ORDER BY batter
@@ -39,13 +42,15 @@ FROM batter_historic_stats
 DROP TABLE IF EXISTS batter_annual_stats;
 
 -- Creating batter annual stats table
-CREATE TABLE IF NOT EXISTS batter_annual_stats AS
+CREATE TABLE batter_annual_stats AS
 SELECT
     b.batter
     , YEAR(g.local_date) AS game_year
     , SUM(Hit) AS annual_hits
     , SUM(atBat) AS annual_atBats
-    , IF(SUM(atBat) = 0, NULL, SUM(Hit) / SUM(atBat)) AS annual_average
+    , IF(SUM(atBat) = 0
+        , NULL
+        , SUM(Hit) / SUM(atBat)) AS annual_average
 FROM batter_counts b JOIN game g ON b.game_id = g.game_id
 GROUP BY batter, game_year
 ORDER BY batter, game_year
@@ -64,10 +69,10 @@ FROM batter_annual_stats
 ;
 
 -- Rolling batting average for each player
--- Creating batter rolling stats table
 DROP TABLE IF EXISTS batter_rolling_stats;
 
-CREATE TABLE IF NOT EXISTS batter_rolling_stats AS
+-- Creating batter rolling stats table
+CREATE TABLE batter_rolling_stats AS
 WITH dummy_table (batter, game_date, hits_per_day, atBats_per_day) AS (
     SELECT
         b.batter
@@ -83,7 +88,9 @@ SELECT
     , A.game_date
     , SUM(B.hits_per_day) AS rolling_hits
     , SUM(B.atBats_per_day) AS rolling_atBats
-    , IF(SUM(B.atBats_per_day) = 0, NULL, SUM(B.hits_per_day) / SUM(B.atBats_per_day)) AS rolling_average
+    , IF(SUM(B.atBats_per_day) = 0
+        , NULL
+        , SUM(B.hits_per_day) / SUM(B.atBats_per_day)) AS rolling_average
 FROM dummy_table A JOIN dummy_table B
     ON A.batter = B.batter
         AND A.game_date > B.game_date

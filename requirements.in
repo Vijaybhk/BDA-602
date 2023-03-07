@@ -5,3 +5,6 @@ scikit-learn
 argparse
 plotly
 seaborn
+mariadb
+sqlalchemy
+pyspark
