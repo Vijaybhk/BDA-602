@@ -194,7 +194,7 @@ def main():
 
     # Create a temporary view rolling_df used in transformer query
     df.createOrReplaceTempView("rolling_df")
-    df.persist(StorageLevel.MEMORY_ONLY)
+    df.persist(StorageLevel.DISK_ONLY)
 
     # Create the transformer object
     rolling_transformer = BatterRollingAverageTransformer(
