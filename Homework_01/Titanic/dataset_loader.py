@@ -123,7 +123,5 @@ if __name__ == "__main__":
     print(df.head())
     print(df.columns)
     homework_01.diff_mean_response_plot_categorical(df, "sex", "survived", "./")
-    homework_01.diff_mean_response_plot_continuous(
-        df, "age", "survived", "./", binsize=8
-    )
+    homework_01.diff_mean_response_plot_continuous(df, "age", "survived", "./")
     sys.exit()

@@ -1,6 +1,5 @@
 import os
 import sys
-from math import ceil
 
 import numpy as np
 import pandas as pd
@@ -159,9 +158,7 @@ def diff_mean_response_plot_categorical(df, predictor, response, write_dir):
     return
 
 
-def diff_mean_response_plot_continuous(
-    df, predictor, response, write_dir, binsize, bargap=0.1
-):
+def diff_mean_response_plot_continuous(df, predictor, response, write_dir, nbins=10):
     """
     Creates difference with mean of response plots for numerical/continuous predictors
     and saves as html files in the write directory
@@ -169,58 +166,67 @@ def diff_mean_response_plot_continuous(
     :param predictor: predictor column in the dataframe which is a numerical/continuous variable
     :param response: response variable
     :param write_dir: Input the write directory path where the plots are to be saved
-    :param binsize: size of bins
-    :param bargap: Gap between bars in histogram, default is 0.1
+    :param nbins: Number of bins to be divided in the bar plot, default is 10.
     """
 
     fig = go.Figure()
 
-    min_range = df[predictor].min()
-    max_range = df[predictor].max()
-    nbins = ceil(((max_range - min_range) / binsize) + bargap)
+    # min_range = df[predictor].min()
+    # max_range = df[predictor].max()
+    # print(min_range, max_range, nbins)
+    x_intervals, x_bins = pd.cut(x=df[predictor], bins=nbins, retbins=True)
 
-    fig.add_trace(
-        go.Histogram(
-            x=df[predictor],
-            y=df[response],
-            name="Population",
-            yaxis="y2",
-            opacity=0.5,
-            xbins=dict(size=binsize, start=min_range),
-        )
-    )
+    """
+    print(x_intervals)
+    for x in x_intervals:
+        print(x)
+    print(x_bins)
+    """
+
+    x_values = []
+    for i in range(nbins):
+        x_values.append((x_bins[i] + x_bins[i + 1]) / 2)
 
     y_bin_response = []
-    x_bin_response = []
-    for i in range(0, nbins):
-        y_bin_response.append(
-            df[
-                (df[predictor] >= (min_range + i * binsize))
-                & (df[predictor] < (min_range + (i + 1) * binsize))
-            ][response].mean()
-        )
-        x_bin_response.append(min_range + (0.5 + i) * binsize)
-        # print(min_range + i*bar_size)
-        # print(min_range + (i+1)*bar_size)
+    y_bin_counts = []
+    population_mean = df[response].mean()
 
-    # print(x_bin_response)
+    for i in range(0, nbins):
+
+        # Range Inclusive on the right side
+        y_bin_response.append(
+            df[(df[predictor] > x_bins[i]) & (df[predictor] <= x_bins[i + 1])][
+                response
+            ].mean()
+        )
+
+        y_bin_counts.append(
+            df[(df[predictor] > x_bins[i]) & (df[predictor] <= x_bins[i + 1])][
+                response
+            ].count()
+        )
+
+    # print(x_values)
     # print(y_bin_response)
+    # print(y_bin_counts)
+
+    fig.add_trace(
+        go.Bar(x=x_values, y=y_bin_counts, name="Population", yaxis="y2", opacity=0.5)
+    )
 
     fig.add_trace(
         go.Scatter(
-            x=x_bin_response,
+            x=x_values,
             y=y_bin_response,
             name="Bin Mean",
             yaxis="y",
         )
     )
 
-    population_mean = df[response].mean()
-
     fig.add_trace(
         go.Scatter(
-            x=x_bin_response,
-            y=[population_mean] * len(x_bin_response),
+            x=x_values,
+            y=[population_mean] * len(x_values),
             name="Population Mean",
             yaxis="y",
             mode="lines",
@@ -234,11 +240,11 @@ def diff_mean_response_plot_continuous(
         yaxis=dict(title="Response"),
         # 2nd y axis
         yaxis2=dict(title="Population", overlaying="y", side="right"),
-        legend=dict(x=1.1, y=1),
+        legend=dict(x=1, y=1),
     )
 
     # title
-    fig.update_layout(title_text="{} and {}".format(predictor, response), bargap=bargap)
+    fig.update_layout(title_text="{} and {}".format(predictor, response))
 
     fig.write_html(
         file="{}/Diff Plot {} and {}.html".format(write_dir, predictor, response),
@@ -447,44 +453,14 @@ def main():
     column_names = df.columns
     print(column_names)
 
-    for i in range(4, 7):
-        diff_mean_response_plot_continuous(
-            df=df,
-            predictor=column_names[0],
-            response=column_names[i],
-            write_dir=plot_dir,
-            binsize=0.4,
-            bargap=0.1,
-        )
-
-        diff_mean_response_plot_continuous(
-            df=df,
-            predictor=column_names[1],
-            response=column_names[i],
-            write_dir=plot_dir,
-            binsize=0.3,
-            bargap=0.1,
-        )
-
-        diff_mean_response_plot_continuous(
-            df=df,
-            predictor=column_names[2],
-            response=column_names[i],
-            write_dir=plot_dir,
-            binsize=0.6,
-            bargap=0.1,
-        )
-
-        diff_mean_response_plot_continuous(
-            df=df,
-            predictor=column_names[3],
-            response=column_names[i],
-            write_dir=plot_dir,
-            binsize=0.3,
-            bargap=0.1,
-        )
-
-    return
+    for i in range(0, 4):
+        for j in range(4, 7):
+            diff_mean_response_plot_continuous(
+                df=df,
+                predictor=column_names[i],
+                response=column_names[j],
+                write_dir=plot_dir,
+            )
 
 
 if __name__ == "__main__":
