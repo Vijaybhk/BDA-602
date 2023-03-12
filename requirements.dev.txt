@@ -181,8 +181,12 @@ mccabe==0.7.0
     # via flake8
 mistune==2.0.4
     # via nbconvert
-mypy-extensions==0.4.3
-    # via black
+mypy==1.1.1
+    # via -r requirements.dev.in
+mypy-extensions==1.0.0
+    # via
+    #   black
+    #   mypy
 nbclassic==0.4.8
     # via
     #   jupyterlab
@@ -352,6 +356,7 @@ tomli==2.0.1
     #   black
     #   build
     #   jupyterlab
+    #   mypy
     #   pyproject-hooks
     #   pytest
 tornado==6.2
@@ -383,6 +388,7 @@ traitlets==5.8.1
 typing-extensions==4.4.0
     # via
     #   black
+    #   mypy
     #   sqlfluff
 uri-template==1.2.0
     # via jsonschema
