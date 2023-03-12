@@ -1,5 +1,6 @@
 import os
 import sys
+from math import ceil
 
 import numpy as np
 import pandas as pd
@@ -87,15 +88,17 @@ def create_dir(dir_name):
     return out_dir
 
 
-def diff_mean_response_plot(df, predictor, response, write_dir):
+def diff_mean_response_plot_categorical(df, predictor, response, write_dir):
     """
-    Creates difference in mean of response plots and saves as html files in the write directory
+    Creates difference with mean of response plots for categorical predictors
+    and saves as html files in the write directory
     :param df: Input dataframe
     :param predictor: predictor in the dataframe which is a class variable
     :param response: predictor in dataframe which is a response variable
     :param write_dir: Input the write directory path where the plots are to be saved
     """
-    total_mean = df[response].mean()
+    population_mean = df[response].mean()
+    x_uniques = df[predictor].unique()
 
     fig = go.Figure()
 
@@ -111,8 +114,8 @@ def diff_mean_response_plot(df, predictor, response, write_dir):
 
     fig.add_trace(
         go.Scatter(
-            x=df[predictor].unique(),
-            y=[df[df[predictor] == i][response].mean() for i in df[predictor].unique()],
+            x=x_uniques,
+            y=[df[df[predictor] == i][response].mean() for i in x_uniques],
             name="Bin Mean",
             yaxis="y",
         )
@@ -120,8 +123,8 @@ def diff_mean_response_plot(df, predictor, response, write_dir):
 
     fig.add_trace(
         go.Scatter(
-            x=df[predictor].unique(),
-            y=[total_mean, total_mean],
+            x=x_uniques,
+            y=[population_mean] * len(x_uniques),
             name="Population Mean",
             yaxis="y",
         )
@@ -156,6 +159,95 @@ def diff_mean_response_plot(df, predictor, response, write_dir):
     return
 
 
+def diff_mean_response_plot_continuous(
+    df, predictor, response, write_dir, binsize, bargap=0.1
+):
+    """
+    Creates difference with mean of response plots for numerical/continuous predictors
+    and saves as html files in the write directory
+    :param df: Input dataframe
+    :param predictor: predictor column in the dataframe which is a numerical/continuous variable
+    :param response: response variable
+    :param write_dir: Input the write directory path where the plots are to be saved
+    :param binsize: size of bins
+    :param bargap: Gap between bars in histogram, default is 0.1
+    """
+
+    fig = go.Figure()
+
+    min_range = df[predictor].min()
+    max_range = df[predictor].max()
+    nbins = ceil(((max_range - min_range) / binsize) + bargap)
+
+    fig.add_trace(
+        go.Histogram(
+            x=df[predictor],
+            y=df[response],
+            name="Population",
+            yaxis="y2",
+            opacity=0.5,
+            xbins=dict(size=binsize, start=min_range),
+        )
+    )
+
+    y_bin_response = []
+    x_bin_response = []
+    for i in range(0, nbins):
+        y_bin_response.append(
+            df[
+                (df[predictor] >= (min_range + i * binsize))
+                & (df[predictor] < (min_range + (i + 1) * binsize))
+            ][response].mean()
+        )
+        x_bin_response.append(min_range + (0.5 + i) * binsize)
+        # print(min_range + i*bar_size)
+        # print(min_range + (i+1)*bar_size)
+
+    # print(x_bin_response)
+    # print(y_bin_response)
+
+    fig.add_trace(
+        go.Scatter(
+            x=x_bin_response,
+            y=y_bin_response,
+            name="Bin Mean",
+            yaxis="y",
+        )
+    )
+
+    population_mean = df[response].mean()
+
+    fig.add_trace(
+        go.Scatter(
+            x=x_bin_response,
+            y=[population_mean] * len(x_bin_response),
+            name="Population Mean",
+            yaxis="y",
+            mode="lines",
+        )
+    )
+
+    # axes objects
+    fig.update_layout(
+        xaxis=dict(title="Predictor Bin"),
+        # 1st y axis
+        yaxis=dict(title="Response"),
+        # 2nd y axis
+        yaxis2=dict(title="Population", overlaying="y", side="right"),
+        legend=dict(x=1.1, y=1),
+    )
+
+    # title
+    fig.update_layout(title_text="{} and {}".format(predictor, response), bargap=bargap)
+
+    fig.write_html(
+        file="{}/Diff Plot {} and {}.html".format(write_dir, predictor, response),
+        include_plotlyjs="cdn",
+    )
+
+    return
+
+
 def main():
     # Using URL for data instead of downloading for better reproducibility
     data_path = (
@@ -172,8 +264,8 @@ def main():
     df = pd.read_csv(data_path, header=None, names=col_names)
 
     # Checking head and tail of the dataframe
-    print(df.head())
-    print(df.tail())
+    # print(df.head())
+    # print(df.tail())
 
     # Summary Statistics using Pandas dataframe describe function
     print(df.describe())
@@ -183,11 +275,12 @@ def main():
 
     # Summary statistics using numpy
     stat_df = numpy_statistics(np_array, col_names[:-1])
+    print("\n Summary Statistics using numpy\n")
     print(stat_df)
 
     # Check Number of Missing Values in each column
     # Found to be None
-    print(df.isna().sum())
+    # print(df.isna().sum())
 
     # Using Standard Scaler
     std_scaler = StandardScaler()
@@ -229,7 +322,7 @@ def main():
     # Source: https://statisticsglobe.com/draw-plotly-boxplot-python
     df_grouped = df.set_index("class").stack().reset_index()
     df_grouped.columns = ["class", "attribute", "value"]
-    print(df_grouped.head())
+    # print(df_grouped.head())
 
     fig_grouped_box = px.box(
         data_frame=df_grouped,
@@ -336,6 +429,8 @@ def main():
     )
 
     # Create Boolean responses for classes
+
+    """
     df["class_Iris-versicolor"] = np.where(
         df["class"] == "Iris-versicolor", "Is", "Is Not"
     )
@@ -343,20 +438,51 @@ def main():
     df["class_Iris-virginica"] = np.where(
         df["class"] == "Iris-virginica", "Is", "Is Not"
     )
+    """
 
-    print(df.head(3))
+    df = pd.get_dummies(df)
+
+    # print(df.head(3))
 
     column_names = df.columns
     print(column_names)
 
-    for i in range(0, 4):
-        for j in range(5, 8):
-            diff_mean_response_plot(
-                df,
-                predictor=column_names[j],
-                response=column_names[i],
-                write_dir=plot_dir,
-            )
+    for i in range(4, 7):
+        diff_mean_response_plot_continuous(
+            df=df,
+            predictor=column_names[0],
+            response=column_names[i],
+            write_dir=plot_dir,
+            binsize=0.4,
+            bargap=0.1,
+        )
+
+        diff_mean_response_plot_continuous(
+            df=df,
+            predictor=column_names[1],
+            response=column_names[i],
+            write_dir=plot_dir,
+            binsize=0.3,
+            bargap=0.1,
+        )
+
+        diff_mean_response_plot_continuous(
+            df=df,
+            predictor=column_names[2],
+            response=column_names[i],
+            write_dir=plot_dir,
+            binsize=0.6,
+            bargap=0.1,
+        )
+
+        diff_mean_response_plot_continuous(
+            df=df,
+            predictor=column_names[3],
+            response=column_names[i],
+            write_dir=plot_dir,
+            binsize=0.3,
+            bargap=0.1,
+        )
 
     return
 

@@ -122,5 +122,8 @@ if __name__ == "__main__":
     df, predictors, response = test_datasets.get_test_data_set(data_set_name="titanic")
     print(df.head())
     print(df.columns)
-    homework_01.diff_mean_response_plot(df, "sex", "survived", "./")
+    homework_01.diff_mean_response_plot_categorical(df, "sex", "survived", "./")
+    homework_01.diff_mean_response_plot_continuous(
+        df, "age", "survived", "./", binsize=8
+    )
     sys.exit()
