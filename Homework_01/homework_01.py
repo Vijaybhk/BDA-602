@@ -2,6 +2,7 @@ import os
 import sys
 
 import numpy as np
+import pandas
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -87,7 +88,7 @@ def create_dir(dir_name):
     return out_dir
 
 
-def diff_mean_response_plot_categorical(df, predictor, response, write_dir):
+def diff_mean_response_plot_categorical_predictor(df, predictor, response, write_dir):
     """
     Creates difference with mean of response plots for categorical predictors
     and saves as html files in the write directory
@@ -158,7 +159,9 @@ def diff_mean_response_plot_categorical(df, predictor, response, write_dir):
     return
 
 
-def diff_mean_response_plot_continuous(df, predictor, response, write_dir, nbins=10):
+def diff_mean_response_plot_continuous_predictor(
+    df, predictor, response, write_dir, nbins=10
+):
     """
     Creates difference with mean of response plots for numerical/continuous predictors
     and saves as html files in the write directory
@@ -167,33 +170,29 @@ def diff_mean_response_plot_continuous(df, predictor, response, write_dir, nbins
     :param response: response variable
     :param write_dir: Input the write directory path where the plots are to be saved
     :param nbins: Number of bins to be divided in the bar plot, default is 10.
+    :return: A Dataframe with difference with mean of response table columns
     """
-
-    fig = go.Figure()
 
     # min_range = df[predictor].min()
     # max_range = df[predictor].max()
     # print(min_range, max_range, nbins)
-    x_intervals, x_bins = pd.cut(x=df[predictor], bins=nbins, retbins=True)
 
-    """
-    print(x_intervals)
-    for x in x_intervals:
-        print(x)
-    print(x_bins)
-    """
+    _, x_bins = pd.cut(x=df[predictor], bins=nbins, retbins=True)
 
-    x_values = []
-    for i in range(nbins):
-        x_values.append((x_bins[i] + x_bins[i + 1]) / 2)
-
+    x_lower = []
+    x_upper = []
+    x_mid_values = []
     y_bin_response = []
     y_bin_counts = []
     population_mean = df[response].mean()
 
-    for i in range(0, nbins):
+    for i in range(nbins):
 
-        # Range Inclusive on the right side
+        x_lower.append(x_bins[i])
+        x_upper.append(x_bins[i + 1])
+        x_mid_values.append((x_lower[i] + x_upper[i]) / 2)
+
+        # x range Inclusive on the right side/upper limit
         y_bin_response.append(
             df[(df[predictor] > x_bins[i]) & (df[predictor] <= x_bins[i + 1])][
                 response
@@ -206,28 +205,46 @@ def diff_mean_response_plot_continuous(df, predictor, response, write_dir, nbins
             ].count()
         )
 
+    diff_mean_df = pandas.DataFrame(
+        {
+            "LowerBin": x_lower,
+            "UpperBin": x_upper,
+            "BinCenters": x_mid_values,
+            "BinCount": y_bin_counts,
+            "BinMeans(μ𝑖)": y_bin_response,
+            "PopulationMean(μ𝑝𝑜𝑝)": [population_mean] * nbins,
+        },
+        index=range(nbins),
+    )
+
     # print(x_values)
+    # print(x_ranges)
     # print(y_bin_response)
     # print(y_bin_counts)
+    # print(out_df)
+
+    fig = go.Figure()
 
     fig.add_trace(
-        go.Bar(x=x_values, y=y_bin_counts, name="Population", yaxis="y2", opacity=0.5)
+        go.Bar(
+            x=x_mid_values, y=y_bin_counts, name="Population", yaxis="y2", opacity=0.5
+        )
     )
 
     fig.add_trace(
         go.Scatter(
-            x=x_values,
+            x=x_mid_values,
             y=y_bin_response,
-            name="Bin Mean",
+            name="Bin Mean(μ𝑖)",
             yaxis="y",
         )
     )
 
     fig.add_trace(
         go.Scatter(
-            x=x_values,
-            y=[population_mean] * len(x_values),
-            name="Population Mean",
+            x=x_mid_values,
+            y=[population_mean] * nbins,
+            name="Population Mean(μpop)",
             yaxis="y",
             mode="lines",
         )
@@ -244,14 +261,18 @@ def diff_mean_response_plot_continuous(df, predictor, response, write_dir, nbins
     )
 
     # title
-    fig.update_layout(title_text="{} and {}".format(predictor, response))
+    fig.update_layout(
+        title_text="Difference with Mean of Response: {} and {}".format(
+            predictor, response
+        )
+    )
 
     fig.write_html(
         file="{}/Diff Plot {} and {}.html".format(write_dir, predictor, response),
         include_plotlyjs="cdn",
     )
 
-    return
+    return diff_mean_df
 
 
 def main():
@@ -455,7 +476,7 @@ def main():
 
     for i in range(0, 4):
         for j in range(4, 7):
-            diff_mean_response_plot_continuous(
+            diff_mean_response_plot_continuous_predictor(
                 df=df,
                 predictor=column_names[i],
                 response=column_names[j],
