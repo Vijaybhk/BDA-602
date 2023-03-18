@@ -2,7 +2,6 @@ import os
 import sys
 
 import numpy as np
-import pandas
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -205,18 +204,6 @@ def diff_mean_response_plot_continuous_predictor(
             ].count()
         )
 
-    diff_mean_df = pandas.DataFrame(
-        {
-            "LowerBin": x_lower,
-            "UpperBin": x_upper,
-            "BinCenters": x_mid_values,
-            "BinCount": y_bin_counts,
-            "BinMeans(μ𝑖)": y_bin_response,
-            "PopulationMean(μ𝑝𝑜𝑝)": [population_mean] * nbins,
-        },
-        index=range(nbins),
-    )
-
     # print(x_values)
     # print(x_ranges)
     # print(y_bin_response)
@@ -272,7 +259,7 @@ def diff_mean_response_plot_continuous_predictor(
         include_plotlyjs="cdn",
     )
 
-    return diff_mean_df
+    return
 
 
 def main():
