@@ -57,12 +57,12 @@ def main():
     for j in cat_pred:
         if res_type == "categorical":
             plot.cat_response_cat_predictor(response, j, plot_dir)
-            diff_dict[j] = "./Plots/Diff_Plot_{}_and_{}.html".format(j, response)
+            diff_dict[j] = "./Plots/Combined_Diff_of_{}.html".format(j)
             plot_dict[j] = "./Plots/Density_Heat_Map_of_{}.html".format(j)
 
         elif res_type == "continuous":
             plot.cont_response_cat_predictor(response, j, plot_dir)
-            diff_dict[j] = "./Plots/Diff_Plot_{}_and_{}.html".format(j, response)
+            diff_dict[j] = "./Plots/Combined_Diff_of_{}.html".format(j)
             plot_dict[j] = "./Plots/Combined_plot_of_{}.html".format(j)
 
     # Predictor Type Dictionary

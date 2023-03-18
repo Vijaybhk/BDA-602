@@ -305,7 +305,8 @@ class VariablePlotter:
     ):
         """
         Creates difference with mean of response plots for categorical predictors
-        and saves as html files in the write directory
+        and saves as html files in the write directory.
+        Also, saves weighted and unweighted mean of response dataframes as html.
         :param df: Input dataframe
         :param predictor: predictor in the dataframe which is a class variable
         :param response: predictor in dataframe which is a response variable
@@ -313,6 +314,59 @@ class VariablePlotter:
         """
         population_mean = df[response].mean()
         x_uniques = df[predictor].unique()
+        nbins = len(x_uniques)
+
+        y_bin_response = []
+        y_bin_counts = []
+
+        for i in x_uniques:
+            y_bin_response.append(df[df[predictor] == i][response].mean())
+            y_bin_counts.append(df[df[predictor] == i][response].count())
+
+        diff_mean_df = pd.DataFrame(
+            {
+                "Bins": x_uniques,
+                "BinCount": y_bin_counts,
+                "BinMeans": y_bin_response,
+                "PopulationMean": population_mean,
+            },
+            index=range(nbins),
+        )
+
+        diff_mean_df["MeanSquareDiff"] = (
+            diff_mean_df["BinMeans"] - population_mean
+        ) ** 2
+
+        diff_mean_df.to_html(
+            "{}/Unweighted_Diff_Table_of_{}.html".format(write_dir, predictor),
+            na_rep="NA",
+        )
+
+        diff_mean_df["PopulationProportion"] = diff_mean_df["BinCount"] / sum(
+            y_bin_counts
+        )
+
+        diff_mean_df["MeanSquareDiffWeighted"] = (
+            diff_mean_df["MeanSquareDiff"] * diff_mean_df["PopulationProportion"]
+        )
+
+        diff_mean_df.loc[nbins, "MeanSquareDiff"] = "Totals = {} ".format(
+            diff_mean_df["MeanSquareDiff"].sum()
+        )
+
+        diff_mean_df.loc[nbins, "PopulationProportion"] = diff_mean_df[
+            "PopulationProportion"
+        ].sum()
+
+        diff_mean_df.loc[nbins, "MeanSquareDiffWeighted"] = diff_mean_df[
+            "MeanSquareDiffWeighted"
+        ].sum()
+
+        diff_mean_df.to_html(
+            "{}/Weighted_Diff_Table_of_{}.html".format(write_dir, predictor),
+            na_rep="",
+            justify="left",
+        )
 
         fig = go.Figure()
 
@@ -329,7 +383,7 @@ class VariablePlotter:
         fig.add_trace(
             go.Scatter(
                 x=x_uniques,
-                y=[df[df[predictor] == i][response].mean() for i in x_uniques],
+                y=y_bin_response,
                 name="Bin Mean",
                 yaxis="y",
             )
@@ -368,6 +422,15 @@ class VariablePlotter:
         fig.write_html(
             file="{}/Diff_Plot_{}_and_{}.html".format(write_dir, predictor, response),
             include_plotlyjs="cdn",
+        )
+
+        combine_html(
+            optional="{}/Diff_plot_{}_and_{}.html".format(
+                write_dir, predictor, response
+            ),
+            one="{}/Unweighted_Diff_Table_of_{}.html".format(write_dir, predictor),
+            three="{}/Combined_Diff_of_{}.html".format(write_dir, predictor),
+            two="{}/Weighted_Diff_Table_of_{}.html".format(write_dir, predictor),
         )
 
         return
