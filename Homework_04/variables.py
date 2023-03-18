@@ -1,15 +1,37 @@
 import pandas.api.types as pt
 import statsmodels.api as sm
+from pandas import DataFrame
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
 
 class DfVariableProcessor:
-    def __init__(self, input_df=None, predictors=None, response=None):
+    """
+    Variable Processor class to process independent
+    and dependent variables in the dataframe
+    """
+
+    def __init__(
+        self,
+        input_df: DataFrame = None,
+        predictors: list[str] = None,
+        response: str = None,
+    ):
+        """
+        Constructor for the Variable Processor class
+        :param input_df: Input Pandas dataframe
+        :param predictors: list of predictors
+        :param response: Response Variable Name
+        """
         self.input_df = input_df
         self.predictors = predictors
         self.response = response
 
-    def check_continuous_var(self, var):
+    def check_continuous_var(self, var: str) -> bool:
+        """
+        Method to check if the variable is continuous or not
+        :param var: Input Variable Name
+        :return: True if Continuous else False
+        """
         flag_cont = False
 
         column = self.input_df[var]
@@ -25,7 +47,12 @@ class DfVariableProcessor:
 
         return flag_cont
 
-    def get_response_type(self):
+    def get_response_type(self) -> str:
+        """
+        Method to get the response type. Converts bool(True/False) to 1 and 0 to
+        support remaining code. Responses other than boolean categorical or
+        continuous will be returned unsupported.
+        """
 
         res_column = self.input_df[self.response]
 
@@ -44,9 +71,12 @@ class DfVariableProcessor:
 
         else:
             print("Unsupported Categorical Response Type")
-            return
+            return "Unsupported Categorical"
 
-    def get_cat_and_cont_predictors(self):
+    def get_cat_and_cont_predictors(self) -> tuple[list, list]:
+        """
+        Method to get the lists of Categorical and Continuous Predictors
+        """
         cat_predictors = []
         cont_predictors = []
 
@@ -58,7 +88,13 @@ class DfVariableProcessor:
 
         return cat_predictors, cont_predictors
 
-    def get_regression_scores(self, cont_predictors):
+    def get_regression_scores(self, cont_predictors: list[str]) -> tuple[dict, dict]:
+        """
+        Method to execute logistic or linear regression for each variable
+        based on response type and get the p values and t scores.
+        :param cont_predictors: list of continuous predictors
+        :return: dictionaries of t scores and p values with predictor name as key
+        """
         t_dict = {}
         p_dict = {}
 
@@ -75,7 +111,7 @@ class DfVariableProcessor:
             elif res_type == "categorical":
                 regression_model = sm.Logit(y, predictor)
 
-            regression_model_fitted = regression_model.fit()
+            regression_model_fitted = regression_model.fit(disp=False)
             # print(f"Variable: {column}")
             # print(linear_regression_model_fitted.summary())
 
@@ -84,10 +120,16 @@ class DfVariableProcessor:
 
         return t_dict, p_dict
 
-    def get_random_forest_scores(self, cont_predictors, response):
+    def get_random_forest_scores(self, cont_predictors: list[str]) -> dict:
+        """
+        Method to execute Random Forest Classifier or Regressor based on
+        response type and get the feature importance scores.
+        :param cont_predictors: list of continuous predictors
+        :return: dictionary of variable importance scores with predictor name as key
+        """
 
         x = self.input_df[cont_predictors]
-        y = self.input_df[response]
+        y = self.input_df[self.response]
         rf_model = None
 
         res_type = self.get_response_type()

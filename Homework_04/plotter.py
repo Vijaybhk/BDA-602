@@ -4,10 +4,17 @@ import pandas as pd
 import plotly.express as px
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
+from pandas import DataFrame
 
 
-def combine_html(one, two, three, optional=None):
-
+def combine_html(one: str, two: str, three: str, optional: str = None):
+    """
+    Function to combine html files, used in the below class.
+    :param one: First html file
+    :param two: Second html file
+    :param three: Resulting html file
+    :param optional: Optional file
+    """
     # Reading data from file1
     with open(one) as fp:
         data = fp.read()
@@ -19,26 +26,40 @@ def combine_html(one, two, three, optional=None):
     # Merging 2 files
     # To add the data of file2
     # from next line
-    data += "\n"
+    data += '<h2 align="right">[contd.]</h2>'
     data += "<hr>"
     data += data2
 
     if optional is not None:
         with open(optional) as fp:
             data3 = fp.read()
+        data += '<h2 align="right">[contd.]</h2>'
         data += "<hr>"
         data += data3
 
     with open(three, "w") as fp:
         fp.write(data)
 
+    return
+
 
 class VariablePlotter:
-    def __init__(self, input_df=None):
+    """
+    Custom Class to Plot Variables in a Dataframe
+    """
+
+    def __init__(self, input_df: DataFrame = None):
+        """
+        Constructor Method for Plotter Class
+        :param input_df: Input DataFrame
+        """
         self.input_df = input_df
 
     @staticmethod
     def create_plot_dir():
+        """
+        Creates a Plots directory within the file directory
+        """
         this_dir = os.path.dirname(os.path.realpath(__file__))
         out_dir = "{}/Plots".format(this_dir)
         if not os.path.exists(out_dir):
@@ -46,7 +67,18 @@ class VariablePlotter:
         return out_dir
 
     @staticmethod
-    def distribution_plot(df, cat_var, cont_var, write_dir, restype):
+    def distribution_plot(
+        df: DataFrame, cat_var: str, cont_var: str, write_dir: str, restype: str
+    ):
+        """
+        Static Method to Creates Distribution Plots for Cat vs Cont Variables
+        Used Within this class
+        :param df: Input Dataframe
+        :param cat_var: Categorical Variable(Response/Predictor)
+        :param cont_var: Continuous Variable(Response/Predictor)
+        :param write_dir: Directory to save plots
+        :param restype: Response Type "cat" or "cont"
+        """
         hist_data = []
         group_labels = []
 
@@ -77,7 +109,19 @@ class VariablePlotter:
         return
 
     @staticmethod
-    def violin_plot(df, cat_var, cont_var, write_dir, restype):
+    def violin_plot(
+        df: DataFrame, cat_var: str, cont_var: str, write_dir: str, restype: str
+    ):
+        """
+        Static Method to Creates Violin Plots for Cat vs Cont Variables
+        Used Within this class
+        :param df: Input Dataframe
+        :param cat_var: Categorical Variable(Response/Predictor)
+        :param cont_var: Continuous Variable(Response/Predictor)
+        :param write_dir: Directory to save plots
+        :param restype: Response Type "cat" or "cont"
+        :return:
+        """
 
         name = cont_var if restype == "cat" else cat_var
 
@@ -92,6 +136,8 @@ class VariablePlotter:
             title="Violin Plot of {}".format(name),
             xaxis_title="{}".format(cat_var),
             yaxis_title="{}".format(cont_var),
+            width=1300,
+            height=700,
         )
         violin_plot.write_html(
             file="{}/Violin_plot_of_{}.html".format(write_dir, name),
@@ -101,17 +147,17 @@ class VariablePlotter:
 
     @staticmethod
     def diff_mean_response_plot_continuous_predictor(
-        df, predictor, response, write_dir, nbins=10
+        df: DataFrame, predictor: str, response: str, write_dir: str, nbins: int = 10
     ):
         """
         Creates difference with mean of response plots for numerical/continuous predictors
-        and saves as html files in the write directory
+        and saves as html files in the write directory.
+        Also, saves weighted and unweighted mean of response dataframes as html
         :param df: Input dataframe
         :param predictor: predictor column in the dataframe which is a numerical/continuous variable
         :param response: response variable
         :param write_dir: Input the write directory path where the plots are to be saved
         :param nbins: Number of bins to be divided in the bar plot, default is 10.
-        :return: A Dataframe with difference with mean of response table columns
         """
 
         _, x_bins = pd.cut(x=df[predictor], bins=nbins, retbins=True)
@@ -255,7 +301,7 @@ class VariablePlotter:
 
     @staticmethod
     def diff_mean_response_plot_categorical_predictor(
-        df, predictor, response, write_dir
+        df: DataFrame, predictor: str, response: str, write_dir: str
     ):
         """
         Creates difference with mean of response plots for categorical predictors
@@ -326,7 +372,15 @@ class VariablePlotter:
 
         return
 
-    def cat_response_cont_predictor(self, cat_resp, cont_pred, write_dir):
+    def cat_response_cont_predictor(
+        self, cat_resp: str, cont_pred: str, write_dir: str
+    ):
+        """
+        Method to Create Plots for Categorical Response and Continuous Predictor
+        :param cat_resp: Categorical Response Variable
+        :param cont_pred: Continuous Predictor Variable
+        :param write_dir: Directory to Save the plots
+        """
 
         self.violin_plot(
             df=self.input_df,
@@ -359,7 +413,15 @@ class VariablePlotter:
 
         return
 
-    def cont_response_cat_predictor(self, cont_resp, cat_pred, write_dir):
+    def cont_response_cat_predictor(
+        self, cont_resp: str, cat_pred: str, write_dir: str
+    ):
+        """
+        Method to Create Plots for Continuous Response and Categorical Predictor
+        :param cont_resp: Continuous Response Variable
+        :param cat_pred: Categorical Predictor Variable
+        :param write_dir: Directory to Save the plots
+        """
         self.violin_plot(
             df=self.input_df,
             cat_var=cat_pred,
@@ -391,7 +453,13 @@ class VariablePlotter:
 
         return
 
-    def cat_response_cat_predictor(self, cat_resp, cat_pred, write_dir):
+    def cat_response_cat_predictor(self, cat_resp: str, cat_pred: str, write_dir: str):
+        """
+        Method to Create Heat Density Plot for Categorical Response and Categorical Predictor
+        :param cat_resp: Categorical Response Variable
+        :param cat_pred: Categorical Predictor Variable
+        :param write_dir: Directory to Save the plots
+        """
 
         heat_plot = px.density_heatmap(
             data_frame=self.input_df,
@@ -421,7 +489,16 @@ class VariablePlotter:
 
         return
 
-    def cont_response_cont_predictor(self, cont_resp, cont_pred, write_dir):
+    def cont_response_cont_predictor(
+        self, cont_resp: str, cont_pred: str, write_dir: str
+    ):
+        """
+        Method to Create Scatter Plot for Continuous Response and Continuous Predictor
+        :param cont_resp: Continuous Response Variable
+        :param cont_pred: Continuous Predictor Variable
+        :param write_dir: Directory to Save the plots
+        """
+
         scatter_plot = px.scatter(
             x=self.input_df[cont_pred], y=self.input_df[cont_resp], trendline="ols"
         )
