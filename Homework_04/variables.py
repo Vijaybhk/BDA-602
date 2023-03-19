@@ -1,3 +1,5 @@
+import sys
+
 import pandas.api.types as pt
 import statsmodels.api as sm
 from pandas import DataFrame
@@ -18,9 +20,17 @@ class DfVariableProcessor:
     ):
         """
         Constructor for the Variable Processor class
-        :param input_df: Input Pandas dataframe
-        :param predictors: list of predictors
-        :param response: Response Variable Name
+
+        Parameters
+        -------------
+
+            input_df: DataFrame
+                Input Pandas dataframe
+            predictors: list[str]
+                list of predictors
+            response: str
+                Response Variable Name
+
         """
         self.input_df = input_df
         self.predictors = predictors
@@ -29,8 +39,17 @@ class DfVariableProcessor:
     def check_continuous_var(self, var: str) -> bool:
         """
         Method to check if the variable is continuous or not
-        :param var: Input Variable Name
-        :return: True if Continuous else False
+
+        Parameters
+        -------------
+            var: str
+                Input Variable Name
+
+        Returns
+        -------------
+            flag_cont: bool
+                True if Continuous else False
+
         """
         flag_cont = False
 
@@ -52,6 +71,13 @@ class DfVariableProcessor:
         Method to get the response type. Converts bool(True/False) to 1 and 0 to
         support remaining code. Responses other than boolean categorical or
         continuous will be returned unsupported.
+
+        Returns
+        -------------
+        str
+            Outputs Response Type
+            "Categorical", or "Continuous", or "Unsupported Categorical"
+
         """
 
         res_column = self.input_df[self.response]
@@ -73,27 +99,52 @@ class DfVariableProcessor:
             print("Unsupported Categorical Response Type")
             return "Unsupported Categorical"
 
-    def get_cat_and_cont_predictors(self) -> tuple[list, list]:
+    def get_cat_and_cont_predictors(self) -> tuple[list, list, dict]:
         """
-        Method to get the lists of Categorical and Continuous Predictors
+        Method to get the lists of Categorical and Continuous Predictors,
+        and dictionary of predictor types
+
+        Returns
+        -------------
+            cat_predictors : list
+                lists of Categorical Predictors
+            cont_predictors : list
+                lists of Continuous Predictors
+            pred_type_dict : dict
+                dictionary of predictor types
+
         """
         cat_predictors = []
         cont_predictors = []
+        pred_type_dict = {}
 
         for predictor in self.predictors:
             if self.check_continuous_var(var=predictor):
                 cont_predictors.append(predictor)
+                pred_type_dict[predictor] = "Continuous"
             else:
                 cat_predictors.append(predictor)
+                pred_type_dict[predictor] = "Categorical"
 
-        return cat_predictors, cont_predictors
+        return cat_predictors, cont_predictors, pred_type_dict
 
     def get_regression_scores(self, cont_predictors: list[str]) -> tuple[dict, dict]:
         """
         Method to execute logistic or linear regression for each variable
         based on response type and get the p values and t scores.
-        :param cont_predictors: list of continuous predictors
-        :return: dictionaries of t scores and p values with predictor name as key
+
+        Parameters
+        -------------
+            cont_predictors: list[str]
+                list of continuous predictors
+
+        Returns
+        -------------
+            t_dict: dict
+                dictionaries of t scores with predictor name as key
+            p_dict: dict
+                dictionaries of p values with predictor name as key
+
         """
         t_dict = {}
         p_dict = {}
@@ -124,8 +175,18 @@ class DfVariableProcessor:
         """
         Method to execute Random Forest Classifier or Regressor based on
         response type and get the feature importance scores.
-        :param cont_predictors: list of continuous predictors
-        :return: dictionary of variable importance scores with predictor name as key
+
+        Parameters
+        -------------
+            cont_predictors: list[str]
+                list of continuous predictors
+
+        Returns
+        -------------
+            scores_dict: dict
+                dictionaries of Random Forest variable importance scores
+                with predictor name as key
+
         """
 
         x = self.input_df[cont_predictors]
@@ -149,3 +210,11 @@ class DfVariableProcessor:
             scores_dict[predictor] = scores[index]
 
         return scores_dict
+
+
+def main():
+    help(DfVariableProcessor)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

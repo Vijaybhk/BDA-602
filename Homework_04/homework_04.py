@@ -8,6 +8,21 @@ from variables import DfVariableProcessor
 
 # Hyperlink clickable function
 def make_clickable(url: str) -> str:
+    """
+    Function to convert url to hyperlink with name as link
+    When you open the link, it opens in a new window as target="_blank"
+
+    Parameters
+    -----------
+        url : str
+            Input url to be converted to hyperlink
+
+    Returns
+    -----------
+    str
+        Clickable hyperlink in html format
+
+    """
     return f'<a target="_blank" href="{url}">link</a>'
 
 
@@ -19,8 +34,8 @@ def main():
     # Initializing the Variable processor
     p1 = DfVariableProcessor(input_df=df, predictors=predictors, response=response)
 
-    # Gets the lists of Categorical and Continuous Predictors
-    cat_pred, cont_pred = p1.get_cat_and_cont_predictors()
+    # Gets the lists of Categorical, Continuous Predictors and Predictor Type Dictionary
+    cat_pred, cont_pred, pred_type_dict = p1.get_cat_and_cont_predictors()
     print("Categorical Predictors: ", cat_pred)
     print("Continuous Predictors: ", cont_pred)
 
@@ -29,50 +44,21 @@ def main():
     print("Response Type: ", res_type)
     print("Response Variable: ", response)
 
-    # Initializing the Plotter with input dataframe
-    plot = VariablePlotter(input_df=df)
-    plot_dir = plot.create_plot_dir()
-
     # Random Forest Scores, and Regression scores (p values and t scores)
     rf_scores = p1.get_random_forest_scores(cont_pred)
     t_scores, p_values = p1.get_regression_scores(cont_pred)
 
-    # Two dicts for predictor plots and mean of response plots
-    diff_dict = {}
-    plot_dict = {}
+    # Initializing the Plotter with input dataframe
+    plot = VariablePlotter(input_df=df)
+    plot_dir = plot.create_plot_dir()
 
-    # Loops to execute plots for particular predictor and response types.
-    # Also, to store paths to diff dict and plot dict.
-    for i in cont_pred:
-        if res_type == "categorical":
-            plot.cat_response_cont_predictor(response, i, plot_dir)
-            diff_dict[i] = "./Plots/Combined_Diff_of_{}.html".format(i)
-            plot_dict[i] = "./Plots/Combined_plot_of_{}.html".format(i)
-
-        elif res_type == "continuous":
-            plot.cont_response_cont_predictor(response, i, plot_dir)
-            diff_dict[i] = "./Plots/Combined_Diff_of_{}.html".format(i)
-            plot_dict[i] = "./Plots/scatter_plot_of_{}.html".format(i)
-
-    for j in cat_pred:
-        if res_type == "categorical":
-            plot.cat_response_cat_predictor(response, j, plot_dir)
-            diff_dict[j] = "./Plots/Combined_Diff_of_{}.html".format(j)
-            plot_dict[j] = "./Plots/Density_Heat_Map_of_{}.html".format(j)
-
-        elif res_type == "continuous":
-            plot.cont_response_cat_predictor(response, j, plot_dir)
-            diff_dict[j] = "./Plots/Combined_Diff_of_{}.html".format(j)
-            plot_dict[j] = "./Plots/Combined_plot_of_{}.html".format(j)
-
-    # Predictor Type Dictionary
-    pred_type_dict = {}
-
-    for i in predictors:
-        if p1.check_continuous_var(i):
-            pred_type_dict[i] = "Continuous"
-        else:
-            pred_type_dict[i] = "Categorical"
+    diff_dict, plot_dict = plot.get_all_plots(
+        cont_pred=cont_pred,
+        cat_pred=cat_pred,
+        response=response,
+        res_type=res_type,
+        write_dir=plot_dir,
+    )
 
     # Creating the Final Dataframe using predictors and their types
     output_df = pd.DataFrame.from_dict(
@@ -90,35 +76,54 @@ def main():
     output_df["Diff with Mean of Response"] = output_df["Variable"].map(diff_dict)
 
     # Ordered Dataframe by Random Forest Scores in descending order
-    output_df = output_df.sort_values(
-        by=["Random Forest Scores"], na_position="last", ascending=False
+    output_df.sort_values(
+        by=["Random Forest Scores"],
+        na_position="last",
+        ascending=False,
+        inplace=True,
+        ignore_index=True,
     )
-
-    # Reset index after sorting
-    output_df.reset_index(drop=True, inplace=True)
 
     # Source for make clickable and style format:
     # https://stackoverflow.com/questions/42263946/
     # how-to-create-a-table-with-clickable-hyperlink-in-pandas-jupyter-notebook
 
-    # applying the clickable function to the required columns.
-    output_df = output_df.style.format(
-        {"Diff with Mean of Response": make_clickable, "Plots": make_clickable}
-    )
-
     # Styling the dataframe in html
-    # Source: https://coderzcolumn.com/tutorials/python/
-    # simple-guide-to-style-display-of-pandas-dataframes
-    output_df = output_df.set_properties(
-        **{
-            "color": "black",
-            "border": "2px solid grey",
-            "background-color": "white",
-        }
+    # applying the clickable function to the required columns and styling the table.
+    output_df.to_html(
+        "report.html",
+        formatters={
+            "Diff with Mean of Response": make_clickable,
+            "Plots": make_clickable,
+        },
+        escape=False,
     )
 
-    # Saves html locally
-    output_df.to_html("report.html", justify="left", render_links=True)
+    output_df_styler = output_df.style
+    output_df_styler.set_caption(
+        ("Predictors Plots and Scores ordered by Random Forest", "bold")
+    )
+
+    output_df_styler.format(
+        na_rep="na",
+        formatter={
+            "Diff with Mean of Response": make_clickable,
+            "Plots": make_clickable,
+        },
+    )
+
+    output_df_styler.set_table_styles(
+        [
+            {"selector": ",th,td", "props": [("border", "1px solid grey")]},
+            {
+                "selector": "caption",
+                "props": [("font-weight", "bold"), ("font-size", "20px")],
+            },
+        ]
+    )
+
+    # Saves styled dataframe html locally
+    output_df_styler.to_html("report_with_caption.html")
 
     return
 
