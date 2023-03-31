@@ -10,49 +10,56 @@ import plotly.graph_objects as go
 from pandas import DataFrame
 
 
-def combine_html(one: str, two: str, three: str, optional: str | None = None):
+def combine_html(combines: dict, result: str, head: str = ""):
     """
     Function to combine html files.
 
     Parameters
     -------------
-        one: str
-            First html file to combine
-        two: str
-            Second html file to combine
-        three: str
-            Resulting html file after combined
-        optional: str | None = None
-            Optional file to combine
+        combines: dict
+            Dictionary of html files to be combined
+            header of the html file as key
+            path of the html file as value
+
+        result: str
+            Result html file path with file name as str
+
+        head: str
+            Header to the resulting html file as str
 
     Returns
     ---------
         None
 
     """
-    # Reading data from file1
-    with open(one) as fp:
-        data = fp.read()
 
-    # Reading data from file2
-    with open(two) as fp:
-        data2 = fp.read()
+    data = (
+        """
+        <style>
+        table {border-collapse: collapse; margin-left: auto; margin-right: auto;}
+        tr:nth-child(even) {background-color: #f2f2f2;}
+        th, td {padding: 15px;}
+        th {background-color: #d0dbe6;}
+        body {
+        font-family: "Helvetica", "Arial", sans-serif;
+        font-size: 14pt;
+        background-color: #fafafa;
+        }
+        </style>
+        <br>
+        """
+        + f'<h1 align="center">{head.title()}</h1>\n'
+    )
 
-    # Merging 2 files
-    # To add the data of file2
-    # from next line
-    data += '<h2 align="right">[contd.]</h2>'
-    data += "<hr>"
-    data += data2
+    for header in combines.keys():
+        # Reading data from a file
+        file = combines[header]
+        with open(file) as fp:
+            data = data + f'<h3 align="center">{header}</h3>' + fp.read()
+        data = data + "<br>"
 
-    if optional is not None:
-        with open(optional) as fp:
-            data3 = fp.read()
-        data += '<h2 align="right">[contd.]</h2>'
-        data += "<hr>"
-        data += data3
-
-    with open(three, "w") as fp:
+    with open(result, "w") as fp:
+        # Writing the final html
         fp.write(data)
 
     return
@@ -210,9 +217,14 @@ class VariablePlotter:
         return
 
     @staticmethod
-    def diff_mean_response_plot_continuous_predictor(
-        df: DataFrame, predictor: str, response: str, write_dir: str, nbins: int = 10
-    ):
+    def diff_mean_response_plots(
+        df: DataFrame,
+        predictor: str,
+        response: str,
+        write_dir: str,
+        predtype: str,
+        nbins: int = 10,
+    ) -> tuple[float, float]:
         """
         Creates difference with mean of response plots for numerical/continuous predictors
         and saves as html files in the write directory.
@@ -231,14 +243,15 @@ class VariablePlotter:
                 Input the write directory path where the plots are to be saved
             nbins: int = 10 as default
                 Number of bins to be divided in the bar plot, default is 10.
+            predtype: str = None as default
+                Predictors Type either categorical or continuous
 
         Returns
         -------------
-            None
+            msd: tuple[float, float]
+                tuple of Mean Square Difference Unweighted and Weighted
 
         """
-
-        _, x_bins = pd.cut(x=df[predictor], bins=nbins, retbins=True)
 
         x_lower = []
         x_upper = []
@@ -247,51 +260,83 @@ class VariablePlotter:
         y_bin_counts = []
         population_mean = df[response].mean()
 
-        for i in range(nbins):
-            x_lower.append(x_bins[i])
-            x_upper.append(x_bins[i + 1])
-            x_mid_values.append((x_lower[i] + x_upper[i]) / 2)
+        if predtype == "continuous":
+            _, x_bins = pd.cut(x=df[predictor], bins=nbins, retbins=True)
 
-            # x range Inclusive on the right side/upper limit
-            y_bin_response.append(
-                df[(df[predictor] > x_bins[i]) & (df[predictor] <= x_bins[i + 1])][
-                    response
-                ].mean()
+            for i in range(nbins):
+                x_lower.append(x_bins[i])
+                x_upper.append(x_bins[i + 1])
+                x_mid_values.append((x_lower[i] + x_upper[i]) / 2)
+
+                # x range Inclusive on the right side/upper limit
+                y_bin_response.append(
+                    df[(df[predictor] > x_bins[i]) & (df[predictor] <= x_bins[i + 1])][
+                        response
+                    ].mean()
+                )
+
+                y_bin_counts.append(
+                    df[(df[predictor] > x_bins[i]) & (df[predictor] <= x_bins[i + 1])][
+                        response
+                    ].count()
+                )
+
+            t_count = sum(y_bin_counts)
+
+            diff_mean_df = pd.DataFrame(
+                {
+                    "LowerBin": x_lower,
+                    "UpperBin": x_upper,
+                    "BinCenters": x_mid_values,
+                    "BinCount": y_bin_counts,
+                    "BinMeans": y_bin_response,
+                    "PopulationMean": [population_mean] * nbins,
+                    "MeanSquareDiff": [
+                        (y - population_mean) ** 2 for y in y_bin_response
+                    ],
+                    "PopulationProportion": [y / t_count for y in y_bin_counts],
+                },
+                index=range(nbins),
             )
 
-            y_bin_counts.append(
-                df[(df[predictor] > x_bins[i]) & (df[predictor] <= x_bins[i + 1])][
-                    response
-                ].count()
+        else:
+            x_mid_values = df[predictor].unique()
+            nbins = len(x_mid_values)
+            for i in x_mid_values:
+                y_bin_response.append(df[df[predictor] == i][response].mean())
+                y_bin_counts.append(df[df[predictor] == i][response].count())
+
+            t_count = sum(y_bin_counts)
+
+            diff_mean_df = pd.DataFrame(
+                {
+                    "Bins": x_mid_values,
+                    "BinCount": y_bin_counts,
+                    "BinMeans": y_bin_response,
+                    "PopulationMean": population_mean,
+                    "MeanSquareDiff": [
+                        (y - population_mean) ** 2 for y in y_bin_response
+                    ],
+                    "PopulationProportion": [y / t_count for y in y_bin_counts],
+                },
+                index=range(nbins),
             )
 
-        t_count = sum(y_bin_counts)
-
-        diff_mean_df = pd.DataFrame(
-            {
-                "LowerBin": x_lower,
-                "UpperBin": x_upper,
-                "BinCenters": x_mid_values,
-                "BinCount": y_bin_counts,
-                "BinMeans": y_bin_response,
-                "PopulationMean": [population_mean] * nbins,
-                "MeanSquareDiff": [(y - population_mean) ** 2 for y in y_bin_response],
-                "PopulationProportion": [y / t_count for y in y_bin_counts],
-            },
-            index=range(nbins),
-        )
-
-        diff_mean_df.iloc[:, :7].to_html(
-            "{}/Unweighted_Diff_Table_of_{}.html".format(write_dir, predictor),
-            na_rep="na",
+        diff_mean_df["MeanSquareDiffUnWeighted"] = (
+            diff_mean_df["MeanSquareDiff"] / nbins
         )
 
         diff_mean_df["MeanSquareDiffWeighted"] = (
             diff_mean_df["MeanSquareDiff"] * diff_mean_df["PopulationProportion"]
         )
 
+        msd = (
+            diff_mean_df["MeanSquareDiffUnWeighted"].sum(),
+            diff_mean_df["MeanSquareDiffWeighted"].sum(),
+        )
+
         diff_mean_df.loc[
-            "Sum", "MeanSquareDiff":"MeanSquareDiffWeighted"
+            "sum", "MeanSquareDiff":"MeanSquareDiffWeighted"
         ] = diff_mean_df.sum()
 
         diff_mean_df.to_html(
@@ -343,11 +388,7 @@ class VariablePlotter:
         )
 
         # title
-        fig.update_layout(
-            title_text="Difference with Mean of Response: {} and {}".format(
-                predictor, response
-            )
-        )
+        fig.update_layout(title_text="{} and {}".format(predictor, response))
 
         fig.write_html(
             file="{}/Diff_Plot_{}_and_{}.html".format(write_dir, predictor, response),
@@ -355,156 +396,20 @@ class VariablePlotter:
         )
 
         combine_html(
-            optional="{}/Diff_plot_{}_and_{}.html".format(
-                write_dir, predictor, response
-            ),
-            one="{}/Unweighted_Diff_Table_of_{}.html".format(write_dir, predictor),
-            three="{}/Combined_Diff_of_{}.html".format(write_dir, predictor),
-            two="{}/Weighted_Diff_Table_of_{}.html".format(write_dir, predictor),
-        )
-
-        return
-
-    @staticmethod
-    def diff_mean_response_plot_categorical_predictor(
-        df: DataFrame, predictor: str, response: str, write_dir: str
-    ):
-        """
-        Creates difference with mean of response plots for categorical predictors
-        and saves as html files in the write directory.
-        Also, saves weighted and unweighted mean of response dataframes as html.
-
-        Parameters
-        --------------
-
-            df: DataFrame
-                Input dataframe
-            predictor: str
-                predictor in the dataframe which is a class variable
-            response: str
-                predictor in dataframe which is a response variable
-            write_dir: str
-                Input the write directory path where the plots are to be saved
-
-        Returns
-        -------------
-            None
-
-        """
-        population_mean = df[response].mean()
-        x_uniques = df[predictor].unique()
-        nbins = len(x_uniques)
-
-        y_bin_response = []
-        y_bin_counts = []
-
-        for i in x_uniques:
-            y_bin_response.append(df[df[predictor] == i][response].mean())
-            y_bin_counts.append(df[df[predictor] == i][response].count())
-
-        t_count = sum(y_bin_counts)
-
-        diff_mean_df = pd.DataFrame(
-            {
-                "Bins": x_uniques,
-                "BinCount": y_bin_counts,
-                "BinMeans": y_bin_response,
-                "PopulationMean": population_mean,
-                "MeanSquareDiff": [(y - population_mean) ** 2 for y in y_bin_response],
-                "PopulationProportion": [y / t_count for y in y_bin_counts],
+            combines={
+                "Difference with Mean of Response Table": f"{write_dir}/Weighted_Diff_Table_of_{predictor}.html",
+                "Difference with Mean of Response Plot": "{}/Diff_plot_{}_and_{}.html".format(
+                    write_dir, predictor, response
+                ),
             },
-            index=range(nbins),
+            result=f"{write_dir}/Combined_Diff_of_{predictor}.html",
         )
 
-        diff_mean_df.iloc[:, :5].to_html(
-            "{}/Unweighted_Diff_Table_of_{}.html".format(write_dir, predictor),
-            na_rep="na",
-        )
-
-        diff_mean_df["MeanSquareDiffWeighted"] = (
-            diff_mean_df["MeanSquareDiff"] * diff_mean_df["PopulationProportion"]
-        )
-
-        diff_mean_df.loc[
-            "Sum", "MeanSquareDiff":"MeanSquareDiffWeighted"
-        ] = diff_mean_df.sum()
-
-        diff_mean_df.to_html(
-            "{}/Weighted_Diff_Table_of_{}.html".format(write_dir, predictor),
-            na_rep="",
-            justify="left",
-        )
-
-        fig = go.Figure()
-
-        fig.add_trace(
-            go.Histogram(
-                x=df[predictor],
-                y=df[response],
-                name="Population",
-                yaxis="y2",
-                opacity=0.5,
-            )
-        )
-
-        fig.add_trace(
-            go.Scatter(
-                x=x_uniques,
-                y=y_bin_response,
-                name="Bin Mean",
-                yaxis="y",
-            )
-        )
-
-        fig.add_trace(
-            go.Scatter(
-                x=x_uniques,
-                y=[population_mean] * len(x_uniques),
-                name="Population Mean",
-                yaxis="y",
-            )
-        )
-
-        # axes objects
-        fig.update_layout(
-            xaxis=dict(title="Predictor Bin"),
-            # 1st y axis
-            yaxis=dict(
-                title="Response",
-                titlefont=dict(color="#1f77b4"),
-                tickfont=dict(color="#1f77b4"),
-            ),
-            # 2nd y axis
-            yaxis2=dict(title="Population", overlaying="y", side="right"),
-            legend=dict(x=1.1, y=1),
-        )
-
-        # title
-        fig.update_layout(
-            title_text="Difference with Mean of Response Plot for {} and {}".format(
-                predictor, response
-            ),
-        )
-
-        fig.write_html(
-            file="{}/Diff_Plot_{}_and_{}.html".format(write_dir, predictor, response),
-            include_plotlyjs="cdn",
-        )
-
-        combine_html(
-            optional="{}/Diff_plot_{}_and_{}.html".format(
-                write_dir, predictor, response
-            ),
-            one="{}/Unweighted_Diff_Table_of_{}.html".format(write_dir, predictor),
-            three="{}/Combined_Diff_of_{}.html".format(write_dir, predictor),
-            two="{}/Weighted_Diff_Table_of_{}.html".format(write_dir, predictor),
-        )
-
-        return
+        return msd
 
     def cat_response_cont_predictor(
         self, cat_resp: str, cont_pred: str, write_dir: str
-    ):
+    ) -> tuple[float, float]:
         """
         Method to Create Plots for Categorical Response and Continuous Predictor
         and also get Difference in Mean of Response plots and Tables for the Predictor
@@ -521,7 +426,8 @@ class VariablePlotter:
 
         Returns
         -------------
-            None
+            msd: tuple[float, float]
+                tuple of Mean Square Difference Unweighted and Weighted
 
         """
 
@@ -541,24 +447,29 @@ class VariablePlotter:
             restype="cat",
         )
 
-        self.diff_mean_response_plot_continuous_predictor(
+        msd = self.diff_mean_response_plots(
             df=self.input_df,
             predictor=cont_pred,
             response=cat_resp,
             write_dir=write_dir,
+            predtype="continuous",
         )
 
         combine_html(
-            one="{}/Violin_plot_of_{}.html".format(write_dir, cont_pred),
-            two="{}/Distribution_plot_of_{}.html".format(write_dir, cont_pred),
-            three="{}/Combined_plot_of_{}.html".format(write_dir, cont_pred),
+            combines={
+                "Violin Plot": "{}/Violin_plot_of_{}.html".format(write_dir, cont_pred),
+                "Distribution Plot": "{}/Distribution_plot_of_{}.html".format(
+                    write_dir, cont_pred
+                ),
+            },
+            result="{}/Combined_plot_of_{}.html".format(write_dir, cont_pred),
         )
 
-        return
+        return msd
 
     def cont_response_cat_predictor(
         self, cont_resp: str, cat_pred: str, write_dir: str
-    ):
+    ) -> tuple[float, float]:
         """
         Method to Create Plots for Continuous Response and Categorical Predictor
         and also get Difference in Mean of Response plots and Tables for the Predictor
@@ -574,7 +485,8 @@ class VariablePlotter:
                 Directory to Save the plots
         Returns
         -------------
-            None
+            msd: tuple[float, float]
+                tuple of Mean Square Difference Unweighted and Weighted
 
         """
         self.violin_plot(
@@ -593,22 +505,29 @@ class VariablePlotter:
             restype="cont",
         )
 
-        self.diff_mean_response_plot_categorical_predictor(
+        msd = self.diff_mean_response_plots(
             df=self.input_df,
             predictor=cat_pred,
             response=cont_resp,
             write_dir=write_dir,
+            predtype="categorical",
         )
 
         combine_html(
-            one="{}/Violin_plot_of_{}.html".format(write_dir, cat_pred),
-            two="{}/Distribution_plot_of_{}.html".format(write_dir, cat_pred),
-            three="{}/Combined_plot_of_{}.html".format(write_dir, cat_pred),
+            combines={
+                "Violin Plot": "{}/Violin_plot_of_{}.html".format(write_dir, cat_pred),
+                "Distribution Plot": "{}/Distribution_plot_of_{}.html".format(
+                    write_dir, cat_pred
+                ),
+            },
+            result="{}/Combined_plot_of_{}.html".format(write_dir, cat_pred),
         )
 
-        return
+        return msd
 
-    def cat_response_cat_predictor(self, cat_resp: str, cat_pred: str, write_dir: str):
+    def cat_response_cat_predictor(
+        self, cat_resp: str, cat_pred: str, write_dir: str
+    ) -> tuple[float, float]:
         """
         Method to Create Heat Density Plot for Categorical Response and Categorical Predictor
         and also get Difference in Mean of Response plots and Tables for the Predictor
@@ -625,7 +544,8 @@ class VariablePlotter:
 
         Returns
         -------------
-            None
+            msd: tuple[float, float]
+                tuple of Mean Square Difference Unweighted and Weighted
 
         """
 
@@ -648,18 +568,19 @@ class VariablePlotter:
             include_plotlyjs="cdn",
         )
 
-        self.diff_mean_response_plot_categorical_predictor(
+        msd = self.diff_mean_response_plots(
             df=self.input_df,
             predictor=cat_pred,
             response=cat_resp,
             write_dir=write_dir,
+            predtype="categorical",
         )
 
-        return
+        return msd
 
     def cont_response_cont_predictor(
         self, cont_resp: str, cont_pred: str, write_dir: str
-    ):
+    ) -> tuple[float, float]:
         """
         Method to Create Scatter Plot for Continuous Response and Continuous Predictor
         and also get Difference in Mean of Response plots and Tables for the Predictor
@@ -675,7 +596,8 @@ class VariablePlotter:
 
         Returns
         -------------
-            None
+            msd: tuple[float, float]
+                tuple of Mean Square Difference Unweighted and Weighted
 
         """
 
@@ -694,14 +616,15 @@ class VariablePlotter:
             include_plotlyjs="cdn",
         )
 
-        self.diff_mean_response_plot_continuous_predictor(
+        msd = self.diff_mean_response_plots(
             df=self.input_df,
             predictor=cont_pred,
             response=cont_resp,
             write_dir=write_dir,
+            predtype="continuous",
         )
 
-        return
+        return msd
 
     def get_all_plots(
         self,
@@ -710,7 +633,7 @@ class VariablePlotter:
         response: str,
         res_type: str,
         write_dir: str,
-    ) -> tuple[dict, dict]:
+    ) -> tuple[dict, dict, dict, dict]:
         """
         Method to get all the plots based on Continuous/Categorical Variables(Predictor/Response)
         Uses other methods in the class to generated outputs and save plots.
@@ -738,37 +661,53 @@ class VariablePlotter:
                 Dictionary object with Variable name as key and combined path of
                 Predictor vs Response plots
 
+            uw_dict: dict
+                Dictionary object with Variable name as key and Unweighted mean of response
+
+            w_dict: dict
+                Dictionary object with Variable name as key and Weighted mean of response
+
         """
 
         # Two dicts for predictor plots and mean of response plots
         diff_dict = {}
         plot_dict = {}
+        uw_dict = {}
+        w_dict = {}
 
         # Loops to execute plots for particular predictor and response types.
         # Also, to store paths to diff dict and plot dict.
         for i in cont_pred:
             if res_type == "categorical":
-                self.cat_response_cont_predictor(response, i, write_dir)
+                msd = self.cat_response_cont_predictor(response, i, write_dir)
                 diff_dict[i] = "./Plots/Combined_Diff_of_{}.html".format(i)
                 plot_dict[i] = "./Plots/Combined_plot_of_{}.html".format(i)
+                w_dict[i] = msd[1]
+                uw_dict[i] = msd[0]
 
             elif res_type == "continuous":
-                self.cont_response_cont_predictor(response, i, write_dir)
+                msd = self.cont_response_cont_predictor(response, i, write_dir)
                 diff_dict[i] = "./Plots/Combined_Diff_of_{}.html".format(i)
                 plot_dict[i] = "./Plots/scatter_plot_of_{}.html".format(i)
+                w_dict[i] = msd[1]
+                uw_dict[i] = msd[0]
 
         for j in cat_pred:
             if res_type == "categorical":
-                self.cat_response_cat_predictor(response, j, write_dir)
+                msd = self.cat_response_cat_predictor(response, j, write_dir)
                 diff_dict[j] = "./Plots/Combined_Diff_of_{}.html".format(j)
                 plot_dict[j] = "./Plots/Density_Heat_Map_of_{}.html".format(j)
+                w_dict[j] = msd[1]
+                uw_dict[j] = msd[0]
 
             elif res_type == "continuous":
-                self.cont_response_cat_predictor(response, j, write_dir)
+                msd = self.cont_response_cat_predictor(response, j, write_dir)
                 diff_dict[j] = "./Plots/Combined_Diff_of_{}.html".format(j)
                 plot_dict[j] = "./Plots/Combined_plot_of_{}.html".format(j)
+                w_dict[j] = msd[1]
+                uw_dict[j] = msd[0]
 
-        return diff_dict, plot_dict
+        return diff_dict, plot_dict, uw_dict, w_dict
 
 
 def main():

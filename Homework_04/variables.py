@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 
 import pandas.api.types as pt
@@ -163,8 +165,6 @@ class DfVariableProcessor:
                 regression_model = sm.Logit(y, predictor)
 
             regression_model_fitted = regression_model.fit(disp=False)
-            # print(f"Variable: {column}")
-            # print(linear_regression_model_fitted.summary())
 
             t_dict[column] = round(regression_model_fitted.tvalues[1], 6)
             p_dict[column] = "{:.6e}".format(regression_model_fitted.pvalues[1])

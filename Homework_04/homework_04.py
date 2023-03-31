@@ -1,12 +1,14 @@
+from __future__ import annotations
+
 import sys
 
 import pandas as pd
 from dataset_loader import TestDatasets
-from plotter import VariablePlotter
+from pandas import DataFrame
+from plotter import VariablePlotter, combine_html
 from variables import DfVariableProcessor
 
 
-# Hyperlink clickable function
 def make_clickable(url: str) -> str:
     """
     Function to convert url to hyperlink with name as link
@@ -23,13 +25,33 @@ def make_clickable(url: str) -> str:
         Clickable hyperlink in html format
 
     """
+    # Source for make clickable and style format:
+    # https://stackoverflow.com/questions/42263946/
+    # how-to-create-a-table-with-clickable-hyperlink-in-pandas-jupyter-notebook
+
     return f'<a target="_blank" href="{url}">link</a>'
 
 
-def main():
+def predictor_reports(df: DataFrame, predictors: list[str], response: str):
+    """
+    Function to generate individual reports categorical and continuous predictors
+    saves in plots directory
 
-    df, predictors, response = TestDatasets().get_test_data_set(data_set_name="mpg")
-    # Change the dataset name above to get the results of dataset you wish from test datasets
+    Parameters
+    -----------
+        df : DataFrame
+            Input dataframe
+
+        predictors: list[str]
+            Input list of predictors
+
+        response: str
+            Input response variable name
+
+    Returns
+    -----------
+        None
+    """
 
     # Initializing the Variable processor
     p1 = DfVariableProcessor(input_df=df, predictors=predictors, response=response)
@@ -48,11 +70,19 @@ def main():
     rf_scores = p1.get_random_forest_scores(cont_pred)
     t_scores, p_values = p1.get_regression_scores(cont_pred)
 
+    # Creating the Final Dataframes
+    cont_df = pd.DataFrame(cont_pred, columns=["Features"])
+    cont_df["Random Forest Scores"] = cont_df["Features"].map(rf_scores)
+    cont_df["p_values"] = cont_df["Features"].map(p_values)
+    cont_df["t_scores"] = cont_df["Features"].map(t_scores)
+
+    cat_df = pd.DataFrame(cat_pred, columns=["Features"])
+
     # Initializing the Plotter with input dataframe
     plot = VariablePlotter(input_df=df)
     plot_dir = plot.create_plot_dir()
 
-    diff_dict, plot_dict = plot.get_all_plots(
+    diff_dict, plot_dict, uw_dict, w_dict = plot.get_all_plots(
         cont_pred=cont_pred,
         cat_pred=cat_pred,
         response=response,
@@ -60,70 +90,58 @@ def main():
         write_dir=plot_dir,
     )
 
-    # Creating the Final Dataframe using predictors and their types
-    output_df = pd.DataFrame.from_dict(
-        pred_type_dict, orient="index", columns=["Predictor Type"]
-    )
+    name = "categorical"
+    for output_df in cat_df, cont_df:
+        # Adding all the other columns to the final dataframe
+        output_df["Plots"] = output_df["Features"].map(plot_dict)
+        output_df["Mean of Response Plot"] = output_df["Features"].map(diff_dict)
+        output_df["Diff Mean Response(Weighted)"] = output_df["Features"].map(w_dict)
+        output_df["Diff Mean Response(Unweighted)"] = output_df["Features"].map(uw_dict)
 
-    output_df.reset_index(names="Variable", inplace=True)
+        # Ordered Dataframe by Diff Mean Response(Weighted) in descending order
+        output_df.sort_values(
+            by=["Diff Mean Response(Weighted)"],
+            na_position="last",
+            ascending=False,
+            inplace=True,
+            ignore_index=True,
+        )
 
-    # Adding all the other columns to the final dataframe
-    output_df["Response Variable"] = response
-    output_df["Plots"] = output_df["Variable"].map(plot_dict)
-    output_df["Random Forest Scores"] = output_df["Variable"].map(rf_scores)
-    output_df["p_values"] = output_df["Variable"].map(p_values)
-    output_df["t_scores"] = output_df["Variable"].map(t_scores)
-    output_df["Diff with Mean of Response"] = output_df["Variable"].map(diff_dict)
-
-    # Ordered Dataframe by Random Forest Scores in descending order
-    output_df.sort_values(
-        by=["Random Forest Scores"],
-        na_position="last",
-        ascending=False,
-        inplace=True,
-        ignore_index=True,
-    )
-
-    # Source for make clickable and style format:
-    # https://stackoverflow.com/questions/42263946/
-    # how-to-create-a-table-with-clickable-hyperlink-in-pandas-jupyter-notebook
-
-    # Styling the dataframe in html
-    # applying the clickable function to the required columns and styling the table.
-    output_df.to_html(
-        "report.html",
-        formatters={
-            "Diff with Mean of Response": make_clickable,
-            "Plots": make_clickable,
-        },
-        escape=False,
-    )
-
-    output_df_styler = output_df.style
-    output_df_styler.set_caption(
-        ("Predictors Plots and Scores ordered by Random Forest", "bold")
-    )
-
-    output_df_styler.format(
-        na_rep="na",
-        formatter={
-            "Diff with Mean of Response": make_clickable,
-            "Plots": make_clickable,
-        },
-    )
-
-    output_df_styler.set_table_styles(
-        [
-            {"selector": ",th,td", "props": [("border", "1px solid grey")]},
-            {
-                "selector": "caption",
-                "props": [("font-weight", "bold"), ("font-size", "20px")],
+        # Styling the dataframe in html
+        # applying the clickable function to the required columns and styling the table.
+        output_df.to_html(
+            f"{plot_dir}/report_{name}.html",
+            formatters={
+                "Mean of Response Plot": make_clickable,
+                "Plots": make_clickable,
             },
-        ]
-    )
+            escape=False,
+            index=False,
+        )
 
-    # Saves styled dataframe html locally
-    output_df_styler.to_html("report_with_caption.html")
+        name = "continuous"
+
+    return
+
+
+def main():
+
+    # Change the dataset name below to get the results of dataset you wish from test datasets
+    # This will be used as the header in the final html generated.
+    data_name = "mpg"
+
+    df, predictors, response = TestDatasets().get_test_data_set(data_set_name=data_name)
+
+    predictor_reports(df=df, predictors=predictors, response=response)
+
+    combine_html(
+        combines={
+            "Continuous Predictors": "./Plots/report_continuous.html",
+            "Categorical Predictors": "./Plots/report_categorical.html",
+        },
+        result="report.html",
+        head=data_name,
+    )
 
     return
 
