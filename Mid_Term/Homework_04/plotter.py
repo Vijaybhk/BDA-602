@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 
 import pandas as pd
@@ -35,28 +34,35 @@ def combine_html(combines: dict, result: str, head: str = ""):
 
     data = (
         """
+        <meta charset="utf-8" />
         <style>
         table {border-collapse: collapse; margin-left: auto; margin-right: auto;}
         tr:nth-child(even) {background-color: #f2f2f2;}
-        th, td {padding: 15px;}
-        th {background-color: #d0dbe6;}
+        th, td {padding: 15px; font-size: 14pt;}
+        th {background-color: #d0dbe6; text-align: center;}
         body {
-        font-family: "Helvetica", "Arial", sans-serif;
+        font-family: "Helvetica", "Arial", "sans-serif";
         font-size: 14pt;
         background-color: #fafafa;
         }
-        </style>
-        <br>
+        h1, h2, h3, h4, h5, h6 {text-align: center;}
+        a {color: #18646d;}
+        a:visited {color: #5a144e;}
+        /* Create a two-column layout */
+        .column {float: left; width: 50%;}
+        /* Clear floats after the columns */
+        .row:after {content: ""; display: table; clear: both;}
+        </style><br>
         """
-        + f'<h1 align="center">{head.title()}</h1>\n'
+        + f"<h1>{head.title()}</h1>\n"
     )
 
     for header in combines.keys():
         # Reading data from a file
         file = combines[header]
         with open(file) as fp:
-            data = data + f'<h3 align="center">{header}</h3>' + fp.read()
-        data = data + "<br>"
+            data = data + f"{header}\n" + fp.read()
+        data = data + "\n<br>"
 
     with open(result, "w") as fp:
         # Writing the final html
@@ -81,23 +87,6 @@ class VariablePlotter:
 
         """
         self.input_df = input_df
-
-    @staticmethod
-    def create_plot_dir() -> str:
-        """
-        Creates a Plots directory within the file directory
-
-        Returns
-        ---------
-            out_dir: str
-                Plots directory path
-
-        """
-        this_dir = os.path.dirname(os.path.realpath(__file__))
-        out_dir = "{}/Plots".format(this_dir)
-        # if not os.path.exists(out_dir):
-        os.makedirs(out_dir, exist_ok=True)
-        return out_dir
 
     @staticmethod
     def distribution_plot(
@@ -151,6 +140,7 @@ class VariablePlotter:
             title=f"Distribution Plot of {name}",
             xaxis_title=f"{x_axis} : {cont_var}",
             yaxis_title="Distribution",
+            paper_bgcolor="#fafafa",
         )
 
         dist_plot.write_html(
@@ -209,6 +199,7 @@ class VariablePlotter:
             yaxis_title="{} : {}".format(y_axis, cont_var),
             width=1300,
             height=700,
+            paper_bgcolor="#fafafa",
         )
         violin_plot.write_html(
             file="{}/Violin_plot_of_{}.html".format(write_dir, name),
@@ -339,11 +330,8 @@ class VariablePlotter:
             "sum", "MeanSquareDiff":"MeanSquareDiffWeighted"
         ] = diff_mean_df.sum()
 
-        diff_mean_df.to_html(
-            "{}/Weighted_Diff_Table_of_{}.html".format(write_dir, predictor),
-            na_rep="",
-            justify="left",
-        )
+        df_path = "{}/Weighted_Diff_Table_of_{}.html".format(write_dir, predictor)
+        diff_mean_df.to_html(df_path, na_rep="", justify="left")
 
         # Diff With Mean of Response Plot
         fig = go.Figure()
@@ -385,24 +373,21 @@ class VariablePlotter:
             # 2nd y axis
             yaxis2=dict(title="Population", overlaying="y", side="right"),
             legend=dict(x=1, y=1),
+            paper_bgcolor="#fafafa",
         )
 
         # title
         fig.update_layout(title_text="{} and {}".format(predictor, response))
 
-        fig.write_html(
-            file="{}/Diff_Plot_{}_and_{}.html".format(write_dir, predictor, response),
-            include_plotlyjs="cdn",
-        )
+        fig_path = "{}/Diff_Plot_{}_and_{}.html".format(write_dir, predictor, response)
+        fig.write_html(file=fig_path, include_plotlyjs="cdn")
 
         combine_html(
             combines={
-                "Difference with Mean of Response Table": f"{write_dir}/Weighted_Diff_Table_of_{predictor}.html",
-                "Difference with Mean of Response Plot": "{}/Diff_plot_{}_and_{}.html".format(
-                    write_dir, predictor, response
-                ),
+                "<h3> Difference with Mean of Response Plot </h3>": f"{fig_path}",
+                "<h3> Difference with Mean of Response Table </h3>": f"{df_path}",
             },
-            result=f"{write_dir}/Combined_Diff_of_{predictor}.html",
+            result=f"{write_dir}/Combined_Diff_of__{predictor}.html",
         )
 
         return msd
@@ -457,12 +442,14 @@ class VariablePlotter:
 
         combine_html(
             combines={
-                "Violin Plot": "{}/Violin_plot_of_{}.html".format(write_dir, cont_pred),
-                "Distribution Plot": "{}/Distribution_plot_of_{}.html".format(
+                "<h3> Violin Plot </h3>": "{}/Violin_plot_of_{}.html".format(
+                    write_dir, cont_pred
+                ),
+                "<h3> Distribution Plot </h3>": "{}/Distribution_plot_of_{}.html".format(
                     write_dir, cont_pred
                 ),
             },
-            result="{}/Combined_plot_of_{}.html".format(write_dir, cont_pred),
+            result="{}/Combined_plot_of__{}.html".format(write_dir, cont_pred),
         )
 
         return msd
@@ -515,12 +502,14 @@ class VariablePlotter:
 
         combine_html(
             combines={
-                "Violin Plot": "{}/Violin_plot_of_{}.html".format(write_dir, cat_pred),
-                "Distribution Plot": "{}/Distribution_plot_of_{}.html".format(
+                "<h3> Violin Plot </h3>": "{}/Violin_plot_of_{}.html".format(
+                    write_dir, cat_pred
+                ),
+                "<h3> Distribution Plot </h3>": "{}/Distribution_plot_of_{}.html".format(
                     write_dir, cat_pred
                 ),
             },
-            result="{}/Combined_plot_of_{}.html".format(write_dir, cat_pred),
+            result="{}/Combined_plot_of__{}.html".format(write_dir, cat_pred),
         )
 
         return msd
@@ -564,7 +553,7 @@ class VariablePlotter:
         )
 
         heat_plot.write_html(
-            file="{}/Density_Heat_Map_of_{}.html".format(write_dir, cat_pred),
+            file="{}/Density_Heat_Map_of__{}.html".format(write_dir, cat_pred),
             include_plotlyjs="cdn",
         )
 
@@ -612,7 +601,7 @@ class VariablePlotter:
         )
 
         scatter_plot.write_html(
-            file="{}/scatter_plot_of_{}.html".format(write_dir, cont_pred),
+            file="{}/scatter_plot_of__{}.html".format(write_dir, cont_pred),
             include_plotlyjs="cdn",
         )
 
@@ -680,30 +669,30 @@ class VariablePlotter:
         for i in cont_pred:
             if res_type == "categorical":
                 msd = self.cat_response_cont_predictor(response, i, write_dir)
-                diff_dict[i] = "./Plots/Combined_Diff_of_{}.html".format(i)
-                plot_dict[i] = "./Plots/Combined_plot_of_{}.html".format(i)
+                diff_dict[i] = "./Plots/Combined_Diff_of__{}.html".format(i)
+                plot_dict[i] = "./Plots/Combined_plot_of__{}.html".format(i)
                 w_dict[i] = msd[1]
                 uw_dict[i] = msd[0]
 
             elif res_type == "continuous":
                 msd = self.cont_response_cont_predictor(response, i, write_dir)
-                diff_dict[i] = "./Plots/Combined_Diff_of_{}.html".format(i)
-                plot_dict[i] = "./Plots/scatter_plot_of_{}.html".format(i)
+                diff_dict[i] = "./Plots/Combined_Diff_of__{}.html".format(i)
+                plot_dict[i] = "./Plots/scatter_plot_of__{}.html".format(i)
                 w_dict[i] = msd[1]
                 uw_dict[i] = msd[0]
 
         for j in cat_pred:
             if res_type == "categorical":
                 msd = self.cat_response_cat_predictor(response, j, write_dir)
-                diff_dict[j] = "./Plots/Combined_Diff_of_{}.html".format(j)
-                plot_dict[j] = "./Plots/Density_Heat_Map_of_{}.html".format(j)
+                diff_dict[j] = "./Plots/Combined_Diff_of__{}.html".format(j)
+                plot_dict[j] = "./Plots/Density_Heat_Map_of__{}.html".format(j)
                 w_dict[j] = msd[1]
                 uw_dict[j] = msd[0]
 
             elif res_type == "continuous":
                 msd = self.cont_response_cat_predictor(response, j, write_dir)
-                diff_dict[j] = "./Plots/Combined_Diff_of_{}.html".format(j)
-                plot_dict[j] = "./Plots/Combined_plot_of_{}.html".format(j)
+                diff_dict[j] = "./Plots/Combined_Diff_of__{}.html".format(j)
+                plot_dict[j] = "./Plots/Combined_plot_of__{}.html".format(j)
                 w_dict[j] = msd[1]
                 uw_dict[j] = msd[0]
 

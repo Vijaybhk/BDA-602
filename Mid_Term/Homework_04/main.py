@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 
 import pandas as pd
@@ -80,7 +81,9 @@ def predictor_reports(df: DataFrame, predictors: list[str], response: str):
 
     # Initializing the Plotter with input dataframe
     plot = VariablePlotter(input_df=df)
-    plot_dir = plot.create_plot_dir()
+    this_dir = os.path.dirname(os.path.realpath(__file__))
+    plot_dir = f"{this_dir}/Plots"
+    os.makedirs(plot_dir, exist_ok=True)
 
     diff_dict, plot_dict, uw_dict, w_dict = plot.get_all_plots(
         cont_pred=cont_pred,

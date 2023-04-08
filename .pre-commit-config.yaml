@@ -31,7 +31,7 @@ repos:
     rev: 1.4.5
     hooks:
       - id: sqlfluff-lint
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: "" # Use the sha / tag you want to point at
-  #   hooks:
-  #     - id: mypy
+#  - repo: https://github.com/pre-commit/mirrors-mypy
+#    rev: "" # Use the sha / tag you want to point at
+#    hooks:
+#      - id: mypy

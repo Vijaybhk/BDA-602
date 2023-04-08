@@ -2,11 +2,10 @@ import random
 import sys
 from typing import List, Tuple
 
+import homework_01
 import pandas
 import seaborn
 from sklearn import datasets
-
-from Homework_01 import homework_01
 
 
 class TestDatasets:
