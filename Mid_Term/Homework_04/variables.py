@@ -16,9 +16,9 @@ class DfVariableProcessor:
 
     def __init__(
         self,
-        input_df: DataFrame = None,
-        predictors: list[str] = None,
-        response: str = None,
+        input_df: DataFrame | None = None,
+        predictors: list[str] | None = None,
+        response: str | None = None,
     ):
         """
         Constructor for the Variable Processor class
