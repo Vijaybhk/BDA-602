@@ -144,7 +144,7 @@ class VariablePlotter:
         )
 
         dist_plot.write_html(
-            file=f"{write_dir}/Distribution_Plot_of_{name}.html",
+            file=f"{write_dir}/Distribution_plot_of_{name}.html",
             include_plotlyjs="cdn",
         )
 
