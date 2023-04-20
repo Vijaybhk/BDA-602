@@ -145,7 +145,13 @@ def mariadb_df(query, db_user="root", db_pass="x11docker"):  # pragma: allowlist
 
     sql_engine = sqlalchemy.create_engine(connect_string)
 
-    df = pd.read_sql_query(query, sql_engine)
+    # Source: https://stackoverflow.com/questions/75310173
+    # /attributeerror-optionengine-object-has-no-attribute-execute
+
+    with sql_engine.connect() as conn:
+        df = pd.read_sql_query(sqlalchemy.text(query), conn)
+
+    # df = pd.read_sql_query(query, sql_engine)
 
     return df
 
