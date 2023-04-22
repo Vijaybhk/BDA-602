@@ -292,7 +292,7 @@ class CorrelationAndBruteForce(DfVariableProcessor):
                 title=f"<b>{plot_title} Correlation Matrix - {typ}</b>",
                 xaxis={"title": "<b> Category 1 </b>"},
                 yaxis_title="<b> Category 2 </b>",
-                height=500,
+                # height=500,
                 paper_bgcolor="#fafafa",
             )
 
