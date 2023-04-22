@@ -14,7 +14,9 @@ def generate_report(
 ):
     """
     Function to generate individual reports categorical and continuous predictors
-    saves in plots directory
+    saves in plots directory.
+    Combines all brute force and correlation reports to the predictor reports.
+    And creates the final html in the root directory as data_name.html
 
     Parameters
     -----------
