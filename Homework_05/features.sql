@@ -48,7 +48,7 @@ SELECT
     , IF(SUM(B.IP) = 0
         , 0
         , (SUM(B.H)+SUM(B.BB)) / SUM(B.IP)) AS WHIP
-    , IF(SUM(B.IP)+SUM(B.BF) = 0
+    , IF(SUM(B.IP)*SUM(B.BF) = 0
         , 0
         , 9*((SUM(B.H)+SUM(B.BB)+SUM(B.HBP))* SUM(B.PTB))/(SUM(B.BF)*SUM(B.IP))
               -0.56) AS CERA
@@ -109,7 +109,7 @@ SELECT
     , IF(SUM(B.IP) = 0
         , 0
         , (SUM(B.H)+SUM(B.BB)) / SUM(B.IP)) AS WHIP
-    , IF(SUM(B.IP)+SUM(B.BF) = 0
+    , IF(SUM(B.IP)*SUM(B.BF) = 0
         , 0
         , 9*((SUM(B.H)+SUM(B.BB)+SUM(B.HBP))* SUM(B.PTB))/(SUM(B.BF)*SUM(B.IP))
               -0.56) AS CERA
@@ -373,7 +373,7 @@ SELECT
     , IF(SUM(B.IP) = 0
         , 0
         , (SUM(B.H)+SUM(B.BB)) / SUM(B.IP)) AS WHIP
-    , IF(SUM(B.IP)+SUM(B.BF) = 0
+    , IF(SUM(B.IP)*SUM(B.BF) = 0
         , 0
         , 9*((SUM(B.H)+SUM(B.BB)+SUM(B.HBP))* SUM(B.PTB))/(SUM(B.BF)*SUM(B.IP))
               -0.56) AS CERA
@@ -432,7 +432,7 @@ SELECT
     , IF(SUM(B.IP) = 0
         , 0
         , (SUM(B.H)+SUM(B.BB)) / SUM(B.IP)) AS WHIP
-    , IF(SUM(B.IP)+SUM(B.BF) = 0
+    , IF(SUM(B.IP)*SUM(B.BF) = 0
         , 0
         , 9*((SUM(B.H)+SUM(B.BB)+SUM(B.HBP))* SUM(B.PTB))/(SUM(B.BF)*SUM(B.IP))
               -0.56) AS CERA
@@ -583,5 +583,3 @@ FROM home_team_pitcher htp JOIN away_team_pitcher atp
 ;
 
 ALTER TABLE team_pitcher_features ADD PRIMARY KEY (game_id, game_date);
-
-SELECT * from team_batter_features;
