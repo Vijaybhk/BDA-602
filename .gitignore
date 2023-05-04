@@ -151,3 +151,7 @@ media
 static
 
 # Project related ignores (place project related ignores below here)
+Homework_06/baseball.sql
+.project
+Backup
+.DS_Store
