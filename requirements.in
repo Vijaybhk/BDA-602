@@ -7,5 +7,5 @@ plotly
 seaborn
 mariadb
 sqlalchemy
-pyspark
+# pyspark # Takes more time to install in docker, not needed!
 statsmodels

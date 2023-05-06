@@ -18,6 +18,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: vij_python_image
     container_name: vij_python
     volumes:
       - ./Backup/Output:/app/Output
