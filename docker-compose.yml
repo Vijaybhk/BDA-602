@@ -1,0 +1,27 @@
+version: "2.1"
+services:
+  vij_mariadb:
+    image: lscr.io/linuxserver/mariadb:latest
+    container_name: vij_mariadb
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+      - MYSQL_ROOT_PASSWORD=x11docker
+    ports:
+      - "8080:3306"
+    restart: "unless-stopped"
+    volumes:
+      - ./Backup/Mariadb:/config
+
+  vij_python:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vij_python_image
+    container_name: vij_python
+    volumes:
+      - ./Backup/Output:/app/Output
+    command: ["/bin/bash", "run_docker.sh"]
+    depends_on:
+      - vij_mariadb
