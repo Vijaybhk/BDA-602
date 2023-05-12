@@ -3,34 +3,50 @@ from __future__ import annotations
 import os
 import sys
 
-from generator import generate_report
+import pandas as pd
+import plotly.graph_objects as go
+import statsmodels.api as sm
 from plotter import combine_html
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import (
+    AdaBoostClassifier,
+    BaggingClassifier,
+    GradientBoostingClassifier,
+    RandomForestClassifier,
+)
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report
+from sklearn.metrics import roc_curve
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier
 from utilities import mariadb_df, model_results
+
+# from generator import generate_report
 
 
 def main():
-    # Name of the data set name to pass in as "heading of the html"
     data_name = "Baseball"
-
-    # Getting data from baseball database and created features table
-    query1 = "SELECT * FROM" + " team_pitcher_features"
-    query2 = "SELECT * FROM" + " team_batter_features"
-    query3 = "SELECT * FROM" + " start_pitcher_features"
-    df1 = mariadb_df(query=query1, db_host="vij_mariadb:3306")
-    df2 = mariadb_df(query=query2, db_host="vij_mariadb:3306")
-    df3 = mariadb_df(query=query3, db_host="vij_mariadb:3306")
-
-    df = df1.merge(df2, on=["game_id", "game_date"])
-    df = df.merge(df3, on=["game_id", "game_date"])
+    query = "SELECT" + " * FROM features_table"
+    df = mariadb_df(query)
     df.sort_values(by=["game_date", "game_id"], inplace=True, ignore_index=True)
+    df.set_index("game_id", inplace=True)
+    train_size = int(len(df) * 0.6)
+    train = df.iloc[:train_size, 1:]
+    test = df.iloc[train_size:, 1:]
+    cols = train.columns
+    medians = train.median(axis=0, skipna=True)
+
+    # Handling Nulls
+    # Replacing nulls in training set and testing set with medians of training set
+    for col_idx, col in enumerate(cols):
+        train[col] = train[col].fillna(medians[col_idx])
+        test[col] = test[col].fillna(medians[col_idx])
+
+    df = pd.concat([train, test])
 
     # Getting predictors and response from dataframe
-    predictors = df.columns[2:-1]
-    response = df.columns[-1]
+    # predictors = df.columns[:-1]
+    # response = df.columns[-1]
 
     # Plots directory path
     this_dir = os.path.dirname(os.path.realpath(__file__))
@@ -38,82 +54,200 @@ def main():
     os.makedirs(plot_dir, exist_ok=True)
 
     # Creating Predictors report as html
-    generate_report(df, predictors, response, plot_dir, data_name)
+    # generate_report(df, predictors, response, plot_dir, data_name)
 
-    # Dividing first 75percent of games as train data
-    # As the data is sorted by game id and date, train data will be past data
-    # and test data will be for future games
-    train_size = int(len(df) * 0.75)
-    x_train = df.iloc[:train_size, 2:-1].values
-    x_test = df.iloc[train_size:, 2:-1].values
+    features = [
+        "TM_RD_DIFF_HIST",
+        "TM_RD_DIFF_ROLL",
+        "SP_BFP_DIFF_ROLL",
+        "SP_SO9_DIFF_ROLL",
+        "TB_OPS_DIFF_HIST",
+        "TB_BABIP_DIFF_ROLL",
+    ]
+
+    # Stats model
+    x = df[features]
+    y = df[["HTWins"]]
+    pred = sm.add_constant(x)
+    logr_model = sm.Logit(y, pred)
+    logr_model_fitted = logr_model.fit()
+    print(logr_model_fitted.summary())
+
+    x_train = x.iloc[:train_size, :].values
+    x_test = x.iloc[train_size:, :].values
     y_train = df.iloc[:train_size, -1].values
     y_test = df.iloc[train_size:, -1].values
 
-    # Random Forest Model
-    rf_model, rf_pred = model_results(
-        name="rfc",
-        classifier=RandomForestClassifier(random_state=42),
-        x_train=x_train,
-        x_test=x_test,
-        y_train=y_train,
-        y_test=y_test,
-        write_dir=plot_dir,
+    # Logistic Regression
+
+    logr_pipe = Pipeline(
+        [("std_scaler", StandardScaler()), ("classifier", LogisticRegression())]
     )
+    logr_pipe = logr_pipe.fit(x_train, y_train)
+    logr_res = model_results("LogisticReg", logr_pipe, x_test, y_test, plot_dir)
 
-    print("\nRandom Forest Results:\n")
-    print(classification_report(y_test, rf_pred))
+    # Decision Tree Classifier
+    tree_random_state = 42
+    decision_tree = DecisionTreeClassifier(random_state=tree_random_state)
+    decision_tree.fit(x_train, y_train)
+    dtree_res = model_results("DecisionTree", decision_tree, x_test, y_test, plot_dir)
 
-    # Logistic Regression Model
-    logr_model, logr_pred = model_results(
-        name="logr",
-        classifier=LogisticRegression(max_iter=131),
-        x_train=x_train,
-        x_test=x_test,
-        y_train=y_train,
-        y_test=y_test,
-        write_dir=plot_dir,
+    # Bagging Tree Classifier
+
+    bagging_tree = BaggingClassifier(
+        estimator=decision_tree, random_state=tree_random_state
     )
-
-    print("Logistic Regression Results:\n")
-    print(classification_report(y_test, logr_pred))
+    bagging_tree.fit(x_train, y_train)
+    bag_res = model_results("BaggingTree", bagging_tree, x_test, y_test, plot_dir)
 
     # Random Forest Model
-    knn_model, knn_pred = model_results(
-        name="knn",
-        classifier=KNeighborsClassifier(n_neighbors=20),
-        x_train=x_train,
-        x_test=x_test,
-        y_train=y_train,
-        y_test=y_test,
-        write_dir=plot_dir,
+
+    rf_model = RandomForestClassifier(random_state=42)
+    rf_model.fit(x_train, y_train)
+    rf_res = model_results("RandomForest", rf_model, x_test, y_test, plot_dir)
+
+    # AdaBoost Classifier
+
+    ada = AdaBoostClassifier(random_state=42)
+    ada.fit(x_train, y_train)
+    ada_res = model_results("AdaBoost", ada, x_test, y_test, plot_dir)
+
+    # XG Boost Classifier
+
+    xg = GradientBoostingClassifier(random_state=42)
+    xg.fit(x_train, y_train)
+    xg_res = model_results("XGBoost", xg, x_test, y_test, plot_dir)
+
+    # KNN Classifier
+
+    knn = Pipeline(
+        [("std_scaler", StandardScaler()), ("classifier", KNeighborsClassifier())]
+    )
+    knn.fit(x_train, y_train)
+    knn_res = model_results("KNN", knn, x_test, y_test, plot_dir)
+
+    # Calculate predicted probabilities
+    logr_prob = logr_pipe.predict_proba(x_test)[::, 1]
+    rf_prob = rf_model.predict_proba(x_test)[::, 1]
+    dtree_prob = decision_tree.predict_proba(x_test)[::, 1]
+    bag_prob = bagging_tree.predict_proba(x_test)[::, 1]
+    ada_prob = ada.predict_proba(x_test)[::, 1]
+    xg_prob = xg.predict_proba(x_test)[::, 1]
+    knn_prob = knn.predict_proba(x_test)[::, 1]
+
+    # Calculate the ROC curve points
+    logr_fpr, logr_tpr, _ = roc_curve(y_test, logr_prob)
+    dtree_fpr, dtree_tpr, _ = roc_curve(y_test, dtree_prob)
+    rf_fpr, rf_tpr, _ = roc_curve(y_test, rf_prob)
+    bag_fpr, bag_tpr, _ = roc_curve(y_test, bag_prob)
+    ada_fpr, ada_tpr, _ = roc_curve(y_test, ada_prob)
+    xg_fpr, xg_tpr, _ = roc_curve(y_test, xg_prob)
+    knn_fpr, knn_tpr, _ = roc_curve(y_test, knn_prob)
+
+    # Calculate the AUC
+    logr_auc = logr_res[2]
+    dtree_auc = dtree_res[2]
+    rf_auc = rf_res[2]
+    bag_auc = bag_res[2]
+    ada_auc = ada_res[2]
+    xg_auc = xg_res[2]
+    knn_auc = knn_res[2]
+
+    # Create the figure
+    fig = go.Figure(
+        data=go.Scatter(
+            x=logr_fpr,
+            y=logr_tpr,
+            name=f"Logistic Regression (AUC={round(logr_auc, 6)})",
+        )
+    )
+    fig = fig.add_trace(
+        go.Scatter(
+            x=[0.0, 1.0],
+            y=[0.0, 1.0],
+            line=dict(dash="dash"),
+            mode="lines",
+            showlegend=False,
+        )
     )
 
-    print("KNN Classifier Results:\n")
-    print(classification_report(y_test, knn_pred))
+    fig = fig.add_trace(
+        go.Scatter(x=rf_fpr, y=rf_tpr, name=f"Random Forest (AUC={round(rf_auc, 6)})")
+    )
+    fig = fig.add_trace(
+        go.Scatter(
+            x=dtree_fpr, y=dtree_tpr, name=f"Decision Tree (AUC={round(dtree_auc, 6)})"
+        )
+    )
+    fig = fig.add_trace(
+        go.Scatter(x=bag_fpr, y=bag_tpr, name=f"Bagging Tree (AUC={round(bag_auc, 6)})")
+    )
+    fig = fig.add_trace(
+        go.Scatter(x=ada_fpr, y=ada_tpr, name=f"Ada Boost (AUC={round(ada_auc, 6)})")
+    )
+    fig = fig.add_trace(
+        go.Scatter(x=xg_fpr, y=xg_tpr, name=f"XG Boost (AUC={round(xg_auc, 6)})")
+    )
+    fig = fig.add_trace(
+        go.Scatter(
+            x=knn_fpr, y=knn_tpr, name=f"KNN Classifier (AUC={round(knn_auc, 6)})"
+        )
+    )
+
+    # Label the figure
+    fig.update_layout(
+        title="Receiver Operator Characteristic ROC Curve",
+        xaxis_title="False Positive Rate (FPR)",
+        yaxis_title="True Positive Rate (TPR)",
+    )
+
+    fig.write_html(file=f"{plot_dir}/roc.html", include_plotlyjs="cdn")
+
+    # Table of Model Results
+    df_list = [logr_res, rf_res, dtree_res, bag_res, ada_res, xg_res, knn_res]
+
+    results = pd.DataFrame(
+        df_list,
+        columns=[
+            "Model",
+            "Accuracy",
+            "AUC",
+            "Precision",
+            "Recall",
+            "f1-Score",
+            "MeanAbsError",
+            "MatthewsCorrCoeff",
+        ],
+    )
+
+    results.sort_values(
+        by=["Accuracy", "Recall"], ascending=[False, False], inplace=True
+    )
+    results.to_html(f"{plot_dir}/results.html", escape=False, index=False)
 
     # Models Results as html
     combine_html(
         combines={
-            "<h2> Random Forest <h2>": f"{plot_dir}/rfc_cm.html",
-            "<h3> RF Classification Report <h3>": f"{plot_dir}/rfc_cr.html",
-            "<h2> Logistic Regression <h2>": f"{plot_dir}/logr_cm.html",
-            "<h3> LR Classification Report <h3>": f"{plot_dir}/logr_cr.html",
-            "<h2> KNN Classifier <h2>": f"{plot_dir}/knn_cm.html",
-            "<h3> KNN Classification Report <h3>": f"{plot_dir}/knn_cr.html",
+            "<h3> Summary of Model Results <h3>": f"{plot_dir}/results.html",
+            "<h2> Receiver Operator Characteristic (ROC) Curves </h2>": f"{plot_dir}/roc.html",
+            "<h2> Logistic Regression <h2>": f"{plot_dir}/LogisticReg_cm.html",
+            "<h3> LR Classification Report <h3>": f"{plot_dir}/LogisticReg_cr.html",
+            "<h2> Decision Tree <h2>": f"{plot_dir}/DecisionTree_cm.html",
+            "<h3> DTree Classification Report <h3>": f"{plot_dir}/DecisionTree_cr.html",
+            "<h2> Bagging Tree <h2>": f"{plot_dir}/BaggingTree_cm.html",
+            "<h3> BTree Classification Report <h3>": f"{plot_dir}/BaggingTree_cr.html",
+            "<h2> Random Forest <h2>": f"{plot_dir}/RandomForest_cm.html",
+            "<h3> RF Classification Report <h3>": f"{plot_dir}/RandomForest_cr.html",
+            "<h2> Ada Boost <h2>": f"{plot_dir}/AdaBoost_cm.html",
+            "<h3> Ada Boost Classification Report <h3>": f"{plot_dir}/AdaBoost_cr.html",
+            "<h2> XG Boost <h2>": f"{plot_dir}/XGBoost_cm.html",
+            "<h3> XG Classification Report <h3>": f"{plot_dir}/XGBoost_cr.html",
+            "<h2> KNN <h2>": f"{plot_dir}/KNN_cm.html",
+            "<h3> KNN Classification Report <h3>": f"{plot_dir}/KNN_cr.html",
         },
         result="Output/Model_Results.html",
         head=f"{data_name} Models Report",
     )
-
-    """
-    With the three models trained, Random Forest, KNN Classifier, and Logistic Regression
-    accuracies are closer to each other. Logistic Regression has slightly more accuracy.
-    Looking at their confusion matrices, Logistic Regression Model predicts more home
-    wins correctly than others.
-    So, using these metrics, I would choose a basic Logistic Regression Model.
-    Creating more good features and improving the models by cutting down garbage,
-    may improve their performance in future.
-    """
 
     return
 
