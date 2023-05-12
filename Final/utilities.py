@@ -82,15 +82,9 @@ def mariadb_df(
     sql_engine = create_engine(connect_string)
 
     # Source: https://stackoverflow.com/questions/75310173/attributeerror-optionengine-object-has-no-attribute-execute
-    try:
-        with sql_engine.connect() as conn:
-            df = pd.read_sql_query(text(query), conn)
 
-    # above line won't run, and needs below lines to fix it, source link provided.
-
-    except Exception as err:
-        print("For older versions of sqlalchemy", type(err))
-        df = pd.read_sql_query(query, sql_engine)
+    with sql_engine.connect() as conn:
+        df = pd.read_sql_query(text(query), conn)
 
     return df
 
