@@ -6,6 +6,7 @@ import sys
 import pandas as pd
 import plotly.graph_objects as go
 import statsmodels.api as sm
+from generator import generate_report
 from plotter import combine_html
 from sklearn.ensemble import (
     AdaBoostClassifier,
@@ -21,13 +22,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from utilities import mariadb_df, model_results
 
-# from generator import generate_report
-
 
 def main():
     data_name = "Baseball"
     query = "SELECT" + " * FROM features_table"
-    df = mariadb_df(query)
+    df = mariadb_df(query, db_host="vij_mariadb:3306")
     df.sort_values(by=["game_date", "game_id"], inplace=True, ignore_index=True)
     df.set_index("game_id", inplace=True)
     train_size = int(len(df) * 0.6)
@@ -45,8 +44,8 @@ def main():
     df = pd.concat([train, test])
 
     # Getting predictors and response from dataframe
-    # predictors = df.columns[:-1]
-    # response = df.columns[-1]
+    predictors = df.columns[:-1]
+    response = df.columns[-1]
 
     # Plots directory path
     this_dir = os.path.dirname(os.path.realpath(__file__))
@@ -54,7 +53,7 @@ def main():
     os.makedirs(plot_dir, exist_ok=True)
 
     # Creating Predictors report as html
-    # generate_report(df, predictors, response, plot_dir, data_name)
+    generate_report(df, predictors, response, plot_dir, data_name)
 
     features = [
         "TM_RD_DIFF_HIST",
