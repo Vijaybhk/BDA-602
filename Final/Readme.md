@@ -6,7 +6,7 @@
 4. [Features](#features)
 5. [Feature Engineering](#feature-engineering)
 6. [Models](#models)
-7. [Results](#results)
+7. [Conclusion](#conclusion)
 
 # Introduction
 
@@ -305,10 +305,11 @@ One of the best predictor that have been highly ranked, for p values, t scores, 
 and the weighted mean of response is the Run differential. It was added to this project only after certain time,
 but adding it has improved the performance tremendously. It has very clear pattern and is very predictive.\
 \
-![Image2](https://github.com/Vijaybhk/images/blob/main/Baseball/Image2.png)
-![Image3](https://github.com/Vijaybhk/images/blob/main/Baseball/Image3.png)
-![Image4](https://github.com/Vijaybhk/images/blob/main/Baseball/Image4.png)
+![Image2](https://github.com/Vijaybhk/images/blob/main/Baseball/Image2.png)\
 \
+![Image3](https://github.com/Vijaybhk/images/blob/main/Baseball/Image3.png)\
+\
+![Image4](https://github.com/Vijaybhk/images/blob/main/Baseball/Image4.png)
 
 ### Correlation Analysis
 
@@ -350,4 +351,53 @@ different feature.
 
 # Models
 
-# Results
+Initially when some best performing features were not created, the models were as good as a random
+guess. When features like the Run differential, Pythagorean Expectation, and Fielding independent pitching were
+added, the models performed. Also, addition of new model like the AdaBoost, XGBoost, and KNN also did good.
+
+Adaboost, and XGBoost were consistently generating good accuracies, when tried with different predictor combinations.
+
+Finally, Logistic Regression, Random Forest, KNearest Neighbors Classifier, Decision tree, Bagging Tree,
+Ada Boost, and XGBoost were used to compare and select the best performing.
+
+As a First attempt, when all the features were thrown at the model, the results were as follows:
+
+![Image8](https://github.com/Vijaybhk/images/blob/main/Baseball/Image8.png)
+
+Later, by carefully observing the predictor plots and scores generated through report, tried various combinations
+and compared the model performances.
+
+Intermediate results:
+
+![Image9](https://github.com/Vijaybhk/images/blob/main/Baseball/Image9.png)
+
+Finally, the models performed well with just eight good and non correlated features.
+
+`SP_BFP_DIFF_ROLL`, `SP_FIP_DIFF_HIST`, `SP_SO9_DIFF_ROLL`, `SP_SOPP_DIFF_HIST`
+
+`TB_BABIP_DIFF_ROLL`, `TB_OPS_DIFF_HIST`
+
+`TM_PYEX_DIFF_HIST`, `TM_RD_DIFF_ROLL`
+
+Results of the Final Models:
+
+![Image10](https://github.com/Vijaybhk/images/blob/main/Baseball/Image10.png)
+
+Adaboost and Logistic Regression were always the top performing models. The final iteration of modeling has
+**Adaboost** at accuracy of **56.87%** and **Logistic Regression** at **56.73%**.
+
+ROC Curves of Final Models:
+
+![Image11](https://github.com/Vijaybhk/images/blob/main/Baseball/Image11.png)
+
+Confusion Matrices of Adaboost and Logistic Regression:
+
+![Image12](https://github.com/Vijaybhk/images/blob/main/Baseball/Image12.png)\
+\
+![Image13](https://github.com/Vijaybhk/images/blob/main/Baseball/Image13.png)
+
+# Conclusion
+
+All the metrics like Accuracy, ROC Curves AUC Score, Mean Absolute Error, Precision and Matthews Coefficient suggests
+that Adaboost is the best performing model. But recall, f1 score and confusion suggest that Logistic Regression predicts
+more wins.
