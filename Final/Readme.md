@@ -258,6 +258,30 @@ WP - Win Percentage: Number games won before by total numbers of games played
 
 # Feature Engineering
 
+- All features have been created in SQL using above formulas. Then loaded to pandas dataframe using SQLAlchemy library.
+
+- All columns except game id, game date and HTWins had some null values. As we are using games before a particular to get stats till that game, when the data is missing for a teams first match in our data, we get null values.\
+
+- Also while doing mathematical operations to generate features on rows having null, values, result will be a null too.
+  This is more pronounced for starting pitcher features as many starting features may not any data before their first game(in the data available).
+
+- So, these missing values are handled by carefully filling with median values of training data. The dataframe is first ordered by game date and game id. and then split into 60:40 ratio for training and testing sets, so that we don't reveal any future data to the model. Now the median values of training data is used to fill nans in training and testing data.
+
+- These nans handled data is concatenated and passed to report generator function available in generator module to get the predictor reports.
+
+Feature Engineering is done in three steps after feature generation:
+
+### Predictor report Analysis
+
+The predictor report is generated in the form of html where all features are seperated for continuous and categorical types. Get p values, t scores and random forest variable importance for the continuous predictor types.
+Weighted and Unweighted mean of responses for both categorical and continuous predictors with their respective pattern plots and mean of response plots.
+
+![Image1](https://github.com/Vijaybhk/images/blob/main/image1.png)
+
+### Correlation Analysis
+
+### Brute Force Analysis
+
 # Models
 
 # Results
