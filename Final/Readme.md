@@ -272,10 +272,9 @@ WP - Win Percentage: Number games won before by total numbers of games played
   and testing sets, so that we don't reveal any future data to the model. Now the median values of training data is used
   to fill nans in training and testing data.
 
-- These nans handled data is concatenated and passed to report generator function available in
-- generator module to get the predictor reports.
+- These nans handled data is concatenated and passed to report generator function available in generator module to get the predictor reports.
 
-Feature Engineering is done in three steps after feature generation:
+Features analysis and selection is done in three steps after feature generation:
 
 ### Predictor report Analysis
 
