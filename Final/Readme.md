@@ -399,5 +399,5 @@ Confusion Matrices of Adaboost and Logistic Regression:
 # Conclusion
 
 All the metrics like Accuracy, ROC Curves AUC Score, Mean Absolute Error, Precision and Matthews Coefficient suggests
-that Adaboost is the best performing model. But recall, f1 score and confusion suggest that Logistic Regression predicts
-more wins.
+that Adaboost is the best performing model. Just to note additionally, recall and confusion matrix suggest that
+Logistic Regression predicts more home team wins.

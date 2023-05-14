@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Setup Health Check for mariadb to delay and start python container
+# Sleep is not needed anymore.
 # sleep 40
 
 # Sources:
