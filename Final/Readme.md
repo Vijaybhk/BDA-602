@@ -7,7 +7,7 @@
 5. [Models](#models)
 6. [Results](#results)
 
-## Introduction
+# Introduction
 
 ![Baseball](https://media.istockphoto.com/id/1190211599/vector/baseball-game-flat-banner-vector-template.jpg?s=612x612&w=0&k=20&c=7HdDIMrU34GievWhJqCZC_z0vEyIf0Q1XupVs4ZwBqI=)
 
@@ -37,7 +37,7 @@ repository and running
 will build the required docker images, run the containers, and generate the output
 inside your repo to `Backup/Output`
 
-## Dataset
+# Dataset
 
 The dataset has been provided in class BDA-602 by the course instructor. Link to download the
 <a href="https://teaching.mrsharky.com/data/baseball.sql.tar.gz" target="_blank">Baseball Dataset</a>.
@@ -61,10 +61,10 @@ data in force_out, and rest of rows are all zeroes where the former had data. He
 good approach. Similarly, for other columns mentioned. I have highlighted more mistakes in the data in the coming
 sections, wherever applicable.
 
-## Terminology
+# Terminology
 
-## Feature_Engineering
+# Feature_Engineering
 
-## Models
+# Models
 
-## Results
+# Results
