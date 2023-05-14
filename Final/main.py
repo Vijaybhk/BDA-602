@@ -5,7 +5,6 @@ import sys
 
 import pandas as pd
 import plotly.graph_objects as go
-import statsmodels.api as sm
 from generator import generate_report
 from plotter import combine_html
 from sklearn.ensemble import (
@@ -56,21 +55,17 @@ def main():
     generate_report(df, predictors, response, plot_dir, data_name)
 
     features = [
-        "TM_RD_DIFF_HIST",
-        "TM_RD_DIFF_ROLL",
         "SP_BFP_DIFF_ROLL",
+        "SP_FIP_DIFF_HIST",
         "SP_SO9_DIFF_ROLL",
-        "TB_OPS_DIFF_HIST",
+        "SP_SOPP_DIFF_HIST",
         "TB_BABIP_DIFF_ROLL",
+        "TB_OPS_DIFF_HIST",
+        "TM_PYEX_DIFF_HIST",
+        "TM_RD_DIFF_ROLL",
     ]
 
-    # Stats model
     x = df[features]
-    y = df[["HTWins"]]
-    pred = sm.add_constant(x)
-    logr_model = sm.Logit(y, pred)
-    logr_model_fitted = logr_model.fit()
-    print(logr_model_fitted.summary())
 
     x_train = x.iloc[:train_size, :].values
     x_test = x.iloc[train_size:, :].values

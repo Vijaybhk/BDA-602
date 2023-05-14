@@ -48,7 +48,7 @@ SELECT
     , IF(SUM(B.PT)=0, NULL, SUM(B.K)/SUM(B.PT)) AS SOPP_HIST
     , IF(SUM(B.IP) = 0
         , NULL
-        , 3+((13*SUM(B.HR)+3*(SUM(B.BB+B.HBP)-2*B.K))/SUM(B.IP))) AS DICE_HIST
+        , (13*SUM(B.HR)+3*SUM(B.BB)-2*SUM(B.K))/SUM(B.IP)) AS FIP_HIST
     , IF(SUM(B.IP) = 0
         , NULL
         , (SUM(B.H)+SUM(B.BB)) / SUM(B.IP)) AS WHIP_HIST
@@ -59,6 +59,10 @@ SELECT
     , IF(SUM(B.BB)=0, NULL, SUM(B.K)/SUM(B.BB)) AS SWR_HIST
     , IF(SUM(B.AB)=0, NULL, SUM(B.H)/SUM(B.AB)) AS OBA_HIST
     , IF(SUM(B.IP)=0, NULL, (SUM(B.K)+SUM(B.BB))/SUM(B.IP)) AS PFR_HIST
+    , IF(SUM(B.IP)=0
+        , NULL
+        , 9*(((SUM(B.H)+SUM(B.BB))*SUM(B.PTB))/(SUM(B.AB)+SUM(B.BB)))/SUM(B.IP)
+        ) AS RAA_HIST
     , A.HTWins
 FROM dummy_table A LEFT JOIN dummy_table B
     ON A.pitcher = B.pitcher
@@ -113,7 +117,7 @@ SELECT
     , IF(SUM(B.PT)=0, NULL, SUM(B.K)/SUM(B.PT)) AS SOPP_ROLL
     , IF(SUM(B.IP) = 0
         , NULL
-        , 3 + ((13*SUM(B.HR)+3*(SUM(B.BB+B.HBP)-2*B.K))/SUM(B.IP))) AS DICE_ROLL
+        , (13*SUM(B.HR)+3*SUM(B.BB)-2*SUM(B.K))/SUM(B.IP)) AS FIP_ROLL
     , IF(SUM(B.IP) = 0
         , NULL
         , (SUM(B.H)+SUM(B.BB)) / SUM(B.IP)) AS WHIP_ROLL
@@ -124,6 +128,10 @@ SELECT
     , IF(SUM(B.BB)=0, NULL, SUM(B.K)/SUM(B.BB)) AS SWR_ROLL
     , IF(SUM(B.AB)=0, NULL, SUM(B.H)/SUM(B.AB)) AS OBA_ROLL
     , IF(SUM(B.IP)=0, NULL, (SUM(B.K)+SUM(B.BB))/SUM(B.IP)) AS PFR_ROLL
+    , IF(SUM(B.IP)=0
+        , NULL
+        , 9*(((SUM(B.H)+SUM(B.BB))*SUM(B.PTB))/(SUM(B.AB)+SUM(B.BB)))/SUM(B.IP)
+        ) AS RAA_ROLL
 FROM dummy_table A LEFT JOIN dummy_table B
     ON A.pitcher = B.pitcher
         AND A.game_date > B.game_date
@@ -146,12 +154,13 @@ SELECT
     , rsp.HRA9_ROLL
     , rsp.SO9_ROLL
     , rsp.SOPP_ROLL
-    , rsp.DICE_ROLL
+    , rsp.FIP_ROLL
     , rsp.CERA_ROLL
     , rsp.WHIP_ROLL
     , rsp.SWR_ROLL
     , rsp.PFR_ROLL
     , rsp.OBA_ROLL
+    , rsp.RAA_ROLL
 FROM hist_sp_stats hsp JOIN roll_sp_stats rsp
     ON hsp.game_id=rsp.game_id
            AND hsp.start_pitcher=rsp.start_pitcher
@@ -187,12 +196,13 @@ SELECT
     , hsp.HRA9_HIST - asp.HRA9_HIST AS SP_HRA9_DIFF_HIST
     , hsp.SO9_HIST - asp.SO9_HIST AS SP_SO9_DIFF_HIST
     , hsp.SOPP_HIST - asp.SOPP_HIST AS SP_SOPP_DIFF_HIST
-    , hsp.DICE_HIST - asp.DICE_HIST AS SP_DICE_DIFF_HIST
+    , hsp.FIP_HIST - asp.FIP_HIST AS SP_FIP_DIFF_HIST
     , hsp.WHIP_HIST - asp.WHIP_HIST AS SP_WHIP_DIFF_HIST
     , hsp.CERA_HIST - asp.CERA_HIST AS SP_CERA_DIFF_HIST
     , hsp.OBA_HIST - asp.OBA_HIST AS SP_OBA_DIFF_HIST
     , hsp.PFR_HIST - asp.PFR_HIST AS SP_PFR_DIFF_HIST
     , hsp.SWR_HIST - asp.SWR_HIST AS SP_SWR_DIFF_HIST
+    , hsp.RAA_HIST - asp.RAA_HIST AS SP_RAA_DIFF_HIST
     , hsp.BFP_ROLL - asp.BFP_ROLL AS SP_BFP_DIFF_ROLL
     , hsp.IP_ROLL - asp.IP_ROLL AS SP_IP_DIFF_ROLL
     , hsp.BB9_ROLL - asp.BB9_ROLL AS SP_BB9_DIFF_ROLL
@@ -200,12 +210,13 @@ SELECT
     , hsp.HRA9_ROLL - asp.HRA9_ROLL AS SP_HRA9_DIFF_ROLL
     , hsp.SO9_ROLL - asp.SO9_ROLL AS SP_SO9_DIFF_ROLL
     , hsp.SOPP_ROLL - asp.SOPP_ROLL AS SP_SOPP_DIFF_ROLL
-    , hsp.DICE_ROLL - asp.DICE_ROLL AS SP_DICE_DIFF_ROLL
+    , hsp.FIP_ROLL - asp.FIP_ROLL AS SP_FIP_DIFF_ROLL
     , hsp.WHIP_ROLL - asp.WHIP_ROLL AS SP_WHIP_DIFF_ROLL
     , hsp.CERA_ROLL - asp.CERA_ROLL AS SP_CERA_DIFF_ROLL
     , hsp.OBA_ROLL - asp.OBA_ROLL AS SP_OBA_DIFF_ROLL
     , hsp.PFR_ROLL - asp.PFR_ROLL AS SP_PFR_DIFF_ROLL
     , hsp.SWR_ROLL - asp.SWR_ROLL AS SP_SWR_DIFF_ROLL
+    , hsp.RAA_ROLL - asp.RAA_ROLL AS SP_RAA_DIFF_ROLL
     , hsp.HTWins
 FROM home_sp_stats hsp JOIN away_sp_stats asp
     ON hsp.game_id = asp.game_id
@@ -257,7 +268,7 @@ SELECT
     , IF(SUM(B.PT)=0, NULL, SUM(B.K)/SUM(B.PT)) AS SOPP_HIST
     , IF(SUM(B.IP) = 0
         , NULL
-        , 3 + ((13*SUM(B.HR)+3*(SUM(B.BB+B.HBP)-2*B.K))/SUM(B.IP))) AS DICE_HIST
+        , (13*SUM(B.HR)+3*SUM(B.BB)-2*SUM(B.K))/SUM(B.IP)) AS FIP_HIST
     , IF(SUM(B.IP) = 0
         , NULL
         , (SUM(B.H)+SUM(B.BB)) / SUM(B.IP)) AS WHIP_HIST
@@ -319,7 +330,7 @@ SELECT
     , IF(SUM(B.PT)=0, NULL, SUM(B.K)/SUM(B.PT)) AS SOPP_ROLL
     , IF(SUM(B.IP) = 0
         , NULL
-        , 3 + ((13*SUM(B.HR)+3*(SUM(B.BB+B.HBP)-2*B.K))/SUM(B.IP))) AS DICE_ROLL
+        , (13*SUM(B.HR)+3*SUM(B.BB)-2*SUM(B.K))/SUM(B.IP)) AS FIP_ROLL
     , IF(SUM(B.IP) = 0
         , NULL
         , (SUM(B.H)+SUM(B.BB)) / SUM(B.IP)) AS WHIP_ROLL
@@ -352,7 +363,7 @@ SELECT
     , HRA9_ROLL
     , SO9_ROLL
     , SOPP_ROLL
-    , DICE_ROLL
+    , FIP_ROLL
     , WHIP_ROLL
     , CERA_ROLL
     , OBA_ROLL
@@ -392,7 +403,7 @@ SELECT
     , htp.HRA9_HIST - atp.HRA9_HIST AS TP_HRA9_DIFF_HIST
     , htp.SO9_HIST - atp.SO9_HIST AS TP_SO9_DIFF_HIST
     , htp.SOPP_HIST - atp.SOPP_HIST AS TP_SOPP_DIFF_HIST
-    , htp.DICE_HIST - atp.DICE_HIST AS TP_DICE_DIFF_HIST
+    , htp.FIP_HIST - atp.FIP_HIST AS TP_FIP_DIFF_HIST
     , htp.WHIP_HIST - atp.WHIP_HIST AS TP_WHIP_DIFF_HIST
     , htp.CERA_HIST - atp.CERA_HIST AS TP_CERA_DIFF_HIST
     , htp.OBA_HIST - atp.OBA_HIST AS TP_OBA_DIFF_HIST
@@ -405,7 +416,7 @@ SELECT
     , htp.HRA9_ROLL - atp.HRA9_ROLL AS TP_HRA9_DIFF_ROLL
     , htp.SO9_ROLL - atp.SO9_ROLL AS TP_SO9_DIFF_ROLL
     , htp.SOPP_ROLL - atp.SOPP_ROLL AS TP_SOPP_DIFF_ROLL
-    , htp.DICE_ROLL - atp.DICE_ROLL AS TP_DICE_DIFF_ROLL
+    , htp.FIP_ROLL - atp.FIP_ROLL AS TP_FIP_DIFF_ROLL
     , htp.WHIP_ROLL - atp.WHIP_ROLL AS TP_WHIP_DIFF_ROLL
     , htp.CERA_ROLL - atp.CERA_ROLL AS TP_CERA_DIFF_ROLL
     , htp.OBA_ROLL - atp.OBA_ROLL AS TP_OBA_DIFF_ROLL
@@ -630,12 +641,13 @@ SELECT
     , spf.SP_HRA9_DIFF_HIST
     , spf.SP_SO9_DIFF_HIST
     , spf.SP_SOPP_DIFF_HIST
-    , spf.SP_DICE_DIFF_HIST
+    , spf.SP_FIP_DIFF_HIST
     , spf.SP_WHIP_DIFF_HIST
     , spf.SP_CERA_DIFF_HIST
     , spf.SP_PFR_DIFF_HIST
     , spf.SP_SWR_DIFF_HIST
     , spf.SP_OBA_DIFF_HIST
+    , spf.SP_RAA_DIFF_HIST
     , spf.SP_BFP_DIFF_ROLL
     , spf.SP_IP_DIFF_ROLL
     , spf.SP_BB9_DIFF_ROLL
@@ -643,12 +655,13 @@ SELECT
     , spf.SP_HRA9_DIFF_ROLL
     , spf.SP_SO9_DIFF_ROLL
     , spf.SP_SOPP_DIFF_ROLL
-    , spf.SP_DICE_DIFF_ROLL
+    , spf.SP_FIP_DIFF_ROLL
     , spf.SP_WHIP_DIFF_ROLL
     , spf.SP_CERA_DIFF_ROLL
     , spf.SP_PFR_DIFF_ROLL
     , spf.SP_SWR_DIFF_ROLL
     , spf.SP_OBA_DIFF_ROLL
+    , spf.SP_RAA_DIFF_ROLL
     , tpf.TP_BFP_DIFF_HIST
     , tpf.TP_IP_DIFF_HIST
     , tpf.TP_BB9_DIFF_HIST
@@ -656,7 +669,7 @@ SELECT
     , tpf.TP_HRA9_DIFF_HIST
     , tpf.TP_SO9_DIFF_HIST
     , tpf.TP_SOPP_DIFF_HIST
-    , tpf.TP_DICE_DIFF_HIST
+    , tpf.TP_FIP_DIFF_HIST
     , tpf.TP_WHIP_DIFF_HIST
     , tpf.TP_CERA_DIFF_HIST
     , tpf.TP_PFR_DIFF_HIST
@@ -669,7 +682,7 @@ SELECT
     , tpf.TP_HRA9_DIFF_ROLL
     , tpf.TP_SO9_DIFF_ROLL
     , tpf.TP_SOPP_DIFF_ROLL
-    , tpf.TP_DICE_DIFF_ROLL
+    , tpf.TP_FIP_DIFF_ROLL
     , tpf.TP_WHIP_DIFF_ROLL
     , tpf.TP_CERA_DIFF_ROLL
     , tpf.TP_PFR_DIFF_ROLL

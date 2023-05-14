@@ -118,7 +118,7 @@ def model_results(name, model, x_test, y_test, write_dir):
     print(classification_report(y_test, predictions))
     mcc = matthews_corrcoef(y_test, predictions)
     mae = mean_absolute_error(y_test, predictions)
-    acc = accuracy_score(y_test, predictions)
+    acc = 100 * accuracy_score(y_test, predictions)
     pre = precision_score(y_test, predictions, pos_label=1)
     rec = recall_score(y_test, predictions, pos_label=1)
     f1 = f1_score(y_test, predictions, pos_label=1)

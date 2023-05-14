@@ -261,7 +261,7 @@ WP - Win Percentage: Number games won before by total numbers of games played
 - All features have been created in SQL using above formulas. Then loaded to pandas dataframe using SQLAlchemy library.
 
 - All columns except game id, game date and HTWins had some null values. As we are using games before a particular to
-  get stats till that game, when the data is missing for a teams first match in our data, we get null values.\
+  get stats till that game, when the data is missing for a teams first match in our data, we get null values.
 
 - Also while doing mathematical operations to generate features on rows having null, values, result will be a null too.
   This is more pronounced for starting pitcher features as many starting features may not any data before their first
