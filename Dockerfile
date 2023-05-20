@@ -35,4 +35,4 @@ RUN pip3 install --compile --no-cache-dir -r requirements.txt
 # Copy over code
 # Copy baseball.sql from root of my project dir
 COPY baseball.sql $APP_HOME
-COPY Homework_06 $APP_HOME
+COPY Final $APP_HOME
